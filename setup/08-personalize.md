@@ -21,10 +21,78 @@ Don't fire a form at them. Just talk. Cover these naturally over a few minutes:
   Should you push back when they're slipping on something?)
 - A few interests, hobbies, relationships that matter.
 
-As they talk, `[I'll do this]` fill in the `Core/` notes (`bio.md`,
-`values.md`, `goals.md`, `preferences.md`, `relationships.md`, `routines.md`)
-using `update_identity_field` or by writing the files directly. Don't push
-them to fill every field — capture what's real and leave the rest blank.
+As they talk, `[I'll do this]` fill in the `Core/` notes using
+`update_identity_field` or by writing the files directly. Don't push them to
+fill every field — capture what's real and leave the rest blank.
+
+---
+
+## STEP 1B — Trim the vault to what they'll actually use
+
+The template ships with a bunch of folders and files. Some are genuinely useful.
+Some look useful and never get touched. Walk them through it honestly and help
+them delete or add anything that doesn't fit.
+
+**Tell them this:**
+> "The template has a bunch of files in it. Let's go through them quickly —
+> some you'll use, some you probably won't, and there might be things you want
+> that aren't here yet. We can delete stuff."
+
+**Honest field notes — use these to guide the conversation:**
+
+**`AI-Observations/` (scratchpad, patterns, nudges)** — don't touch. These
+are managed automatically. Deleting them breaks things. `[I'll do this]`
+make sure they know not to manually edit these.
+
+**`Core/bio.md`** — fill this out, it's the foundation everything else builds
+on. You need it.
+
+**`Core/goals.md`** — actually useful. Claude will reference this to check in
+on progress and notice when something isn't moving. Worth filling in even briefly.
+
+**`Core/preferences.md`** — good for telling Claude your quirks: what you like,
+what you hate, how you want to be talked to. Feeds directly into the identity
+summary. Worth a few lines.
+
+**`Core/values.md`** — looks philosophical and easy to skip. In practice it
+shapes how Claude gives advice and what it notices. Worth 5 minutes if they
+have any strong opinions about how they want to live. Skip if they don't.
+
+**`Core/relationships.md`** — this one exists in the template, but honestly
+it doesn't get much use in practice. The idea is Claude knows who the important
+people in your life are so it can give better advice. Useful *if* they want
+that — e.g. "remind me about my sister's situation when I bring her up." If
+they don't care, just delete it.
+
+**`Core/routines.md`** — similar deal. Useful if their schedule/rhythm matters
+for context (night owl, morning routine, workout days). Otherwise it just sits
+empty. Delete it if they shrug.
+
+**`Health/health-overview.md`** — fill in the basics (any conditions, meds,
+general fitness situation). Gets pulled into the identity summary.
+
+**`Health/metrics/` (weight, mood, sleep)** — starter set. `[I'll do this]`
+ask them: which of these do you actually want to track? Delete the ones they
+won't use. If they want to track something else (workouts, food, drinks,
+whatever), that's easy to add — just a new file with the right frontmatter.
+
+**`Work/work-overview.md`** — useful if work is any part of their life. Even
+a few sentences gives Claude context when work stuff comes up.
+
+**`Interests/reading.md`** — this is just an example. `[I'll do this]`
+rename/replace it with their actual interests. If they're into gaming, fishing,
+music, cooking — whatever — make a file for it. If they don't care about
+tracking interests at all, delete the whole folder.
+
+**`Journal/` and `Stream/`** — both optional but worth knowing about. Journal
+is for intentional dated entries. Stream is freeform brain-dump with timestamps.
+You can use one, both, or neither. They don't need to decide now.
+
+After this conversation:
+- `[I'll do this]` delete whatever they don't want
+- `[I'll do this]` create any new files/folders they asked for (use the right
+  frontmatter `type:` so the routing works — see `CLAUDE.md` for the table)
+- `[I'll do this]` add any new folders to the routing table in `CLAUDE.md`
 
 ---
 
