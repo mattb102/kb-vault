@@ -30,7 +30,21 @@ chunk is a conversation, not a form.
    This turns the `Core/` notes into a compact `Core/core-identity.md` that
    you load on every session — the vault's memory of who they are.
 
-4. **Pick plugins.** Show them the short list with plain-language descriptions
+4. `[I'll do this]` Generate their **claude.ai custom instructions** — a short
+   block they paste into the Claude app so that every conversation on their
+   phone and desktop already knows who they are and how to use the vault. Fill
+   in `config/claude-ai-instructions.template` with the same `{{owner_name}}`,
+   `{{owner_blurb}}`, and `{{personality}}` you just used, and show them the
+   result.
+
+   `[You'll do this]` Paste it into Claude's custom instructions: in claude.ai,
+   go to **Settings → Customize Claude** (desktop) or the profile menu on
+   mobile, and paste it into the **"What would you like Claude to know about
+   you?"** field. This applies to all Claude chats — not just vault sessions —
+   so keep the blurb honest and concise. Once pasted, every Claude conversation
+   will open knowing who they are, even without the vault connected.
+
+5. **Pick plugins.** Show them the short list with plain-language descriptions
    (use `AskUserQuestion` with multi-select if you want a menu):
    - **running** — log runs and see your stats
    - **calendar** — connect Google Calendar (needs an extra setup step)
@@ -48,7 +62,7 @@ chunk is a conversation, not a form.
      and have them visit `https://<domain>/calendar/auth` once to link their
      account.
 
-5. `[I'll do this]` Commit and push the vault so both surfaces see the changes:
+6. `[I'll do this]` Commit and push the vault so both surfaces see the changes:
    ```
    git add -A && git commit -m "personalize vault" && git push
    ```
