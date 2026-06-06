@@ -75,6 +75,9 @@ EMBEDDING_PROVIDER=$EMBEDDING_PROVIDER
 OPENAI_API_KEY=$OPENAI_API_KEY
 API_KEY=$API_KEY
 AUTH_PASSWORD=$AUTH_PASSWORD
+# Optional: enables promote_patterns (auto-synthesizes observations into patterns).
+# Get a key at console.anthropic.com → API keys.
+# ANTHROPIC_API_KEY=sk-ant-...
 EOF
 chmod 600 .env
 ok ".env written"

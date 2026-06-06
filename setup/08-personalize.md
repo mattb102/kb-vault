@@ -50,7 +50,6 @@ chunk is a conversation, not a form.
    - **calendar** — connect Google Calendar (needs an extra setup step)
    - **mal** — track anime you're watching
    - **espn** — fantasy sports stuff
-   - **coinbase** — crypto holdings
    - The rest are off by default for a reason; only mention them if they ask.
 
    `[I'll do this]` Set `enabledPlugins` in `config/config.yaml` to exactly

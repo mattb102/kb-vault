@@ -236,7 +236,7 @@ async function rewritePatternBlock(
 ): Promise<boolean> {
   const raw = await readFile(patternsPath, "utf-8");
   const markerRe = new RegExp(
-    `<!--\\s*source:\\s*type=${escapeRegex(type)}\\s+subject=${escapeRegex(subject)}(?:\\s+synthesized=\\d{4}-\\d{2}-\\d{2})?\\s*-->`,
+    `<!--\\s*source:\\s*type=${escapeRegex(type)}\\s+subject=${escapeRegex(subject)}(?:\\s+synthesized=\\d{4}-\\d{2}-\\d{2}[^>]*)?\\s*-->`,
   );
   const m = markerRe.exec(raw);
   if (!m) return false;

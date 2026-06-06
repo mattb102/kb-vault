@@ -68,6 +68,10 @@ if [ ! -f .env ]; then
 #  OPENAI_API_KEY=sk-... here, then re-run this script.)
 EMBEDDING_PROVIDER=local
 VAULT_PATH=$VAULT_PATH
+
+# Optional: enables promote_patterns (auto-synthesizes scratchpad observations
+# into long-term patterns). Get a key at console.anthropic.com → API keys.
+# ANTHROPIC_API_KEY=sk-ant-...
 EOF
   ok "Wrote .env (local embeddings — no API key required)"
 fi

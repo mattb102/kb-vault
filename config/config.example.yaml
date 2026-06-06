@@ -32,6 +32,5 @@ embeddingProvider: local
 #   calendar  - worked example: Google Calendar (needs Google OAuth)
 #   mal       - reference: MyAnimeList anime/manga tracking
 #   espn      - reference: ESPN fantasy baseball (read-only API)
-#   coinbase  - reference: Coinbase holdings (read-only API)
 #   claude_code - powerful: delegate coding tasks to Claude Code on the VPS
 enabledPlugins: []
