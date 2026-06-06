@@ -1,0 +1,9 @@
+node_modules/
+build/
+data/
+*.tsbuildinfo
+.env
+config/config.yaml
+.google-tokens.json
+.mal-tokens.json
+logs/

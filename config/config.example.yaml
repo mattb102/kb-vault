@@ -1,0 +1,37 @@
+# Copy this to config/config.yaml and edit. Non-secret preferences only —
+# secrets (API_KEY, AUTH_PASSWORD, OPENAI_API_KEY) live in .env, written by
+# the bootstrap scripts. Environment variables override anything set here.
+
+# Absolute path to your vault (the folder of markdown notes). Required.
+# The bootstrap scripts set this for you.
+vaultPath: /home/you/vault
+
+# Your name, used to address you in tool output. Set during personalization.
+ownerName: "the user"
+
+# Shown on the sign-in screen and as the MCP server name.
+serverName: "vault"
+
+# "stdio" for local Claude Code, "http" for the VPS deployment.
+# The bootstrap scripts set this per surface.
+transport: stdio
+port: 3000
+
+# Embeddings backend (powers semantic search):
+#   local   -> quantized ONNX model on the box. No API key, no account, no cost.
+#              The default. Wants a 4GB x86 box (the cheapest Hetzner CX22 is fine).
+#   openai  -> hosted API. Opt-in. Runs on an even tinier box and indexes faster,
+#              but needs an OpenAI account + OPENAI_API_KEY (a few pennies/month).
+embeddingProvider: local
+# embeddingModel: nomic-ai/nomic-embed-text-v1.5   # (local default)
+# embeddingModel: text-embedding-3-small           # (openai default)
+
+# Opt-in feature plugins. A fresh install enables none. Personalization
+# (setup chunk 08) edits this list. Available plugins live in src/plugins/:
+#   running   - worked example: log runs + aggregate stats (write-back)
+#   calendar  - worked example: Google Calendar (needs Google OAuth)
+#   mal       - reference: MyAnimeList anime/manga tracking
+#   espn      - reference: ESPN fantasy baseball (read-only API)
+#   coinbase  - reference: Coinbase holdings (read-only API)
+#   claude_code - powerful: delegate coding tasks to Claude Code on the VPS
+enabledPlugins: []

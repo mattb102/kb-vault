@@ -1,0 +1,36 @@
+{
+  "name": "kb-vault",
+  "version": "1.0.0",
+  "description": "A friend-installable personal knowledge-base ('vault') MCP server with RAG, write-back, AI observations, and opt-in plugins",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsx src/index.ts",
+    "index-vault": "tsx scripts/index-vault.ts",
+    "generate-identity": "tsx scripts/generate-identity.ts"
+  },
+  "keywords": ["mcp", "knowledge-base", "vault", "rag"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@huggingface/transformers": "^4.0.1",
+    "@lancedb/lancedb": "^0.27.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "chokidar": "^5.0.0",
+    "googleapis": "^173.0.0",
+    "gray-matter": "^4.0.3",
+    "openai": "^6.39.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "yaml": "^2.6.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}

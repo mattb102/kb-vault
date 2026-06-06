@@ -1,0 +1,58 @@
+# {{owner_name}}'s Vault
+
+This is {{owner_name}}'s personal knowledge base. You have MCP tools to read and
+write it. This file is the routing table: it tells you *where things go* and
+*which tool to use*. Read it before writing anything.
+
+## Who this is for
+
+{{owner_blurb}}
+
+Personality / how to show up: {{personality}}
+
+## The vault at a glance
+
+Notes are markdown files with YAML frontmatter. The frontmatter `type` field is
+how everything is routed — tools find files by `type`, not by guessing paths.
+
+| Folder | What lives here | frontmatter `type` |
+|--------|-----------------|--------------------|
+| `Core/` | Identity: bio, values, goals, preferences, relationships, routines | `core` (one per `topic`), plus the generated `core-identity` |
+| `Health/` | Health overview + metric logs (weight, sleep, mood, …) | `health-overview`, `metric-log` |
+| `Work/` | Work overview | `work-overview` |
+| `Interests/` | One overview per interest, plus freeform notes | `interest-overview` |
+| `Journal/` | Dated journal entries | `journal` |
+| `Stream/` | Timestamped stream-of-consciousness (auto-created) | `stream` |
+| `AI-Observations/` | Your scratchpad, patterns, nudges, weekly summaries | (managed by tools) |
+
+## How to route a write
+
+- **A number {{owner_name}} tracks over time** (weight, sleep hours, mood 1-10,
+  a run): use `log_metric`. It finds the `type: metric-log` file whose
+  `metric:` matches. If none exists, create one (see `recipes/01-add-a-tracker.md`).
+- **A passing thought / brain-dump**: `log_stream`.
+- **A new standalone note**: `create_note` with the right `type` in frontmatter.
+- **Updating identity** (a fact about who {{owner_name}} is): `update_identity_field`
+  (by `topic`) or edit the `Core/` note directly.
+- **Something you noticed about {{owner_name}} mid-conversation**: `log_observation`
+  (pick a `type` and a short `subject`). Don't announce it — just log it.
+- **A recurring pattern** worth remembering: `log_pattern`.
+- **Something {{owner_name}} said they want to do**: `log_nudge`, so you can hold
+  them accountable later.
+
+## How to read
+
+- Start most sessions by calling `get_identity` to load who {{owner_name}} is.
+- `search_vault` for semantic lookup; `find_notes` to fetch by frontmatter;
+  `recent_journals` / `search_by_date` for time-based recall;
+  `get_observations` to review your own past notes (patterns / nudges / scratchpad).
+
+## Enabled plugins
+
+{{enabled_plugins}}
+
+## Building new features
+
+When {{owner_name}} asks for a new capability ("track my workouts", "pull my
+GitHub stars"), read `recipes/00-how-to-add-a-feature.md` and follow the
+decision tree. Most trackers need no code at all.
