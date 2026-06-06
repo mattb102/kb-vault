@@ -49,6 +49,26 @@ about to break something.
    read the next chunk file yourself and keep going. Don't ask "should I
    continue?" — just do it.
 
+7. **Spark inspiration as you go.** At natural pauses — while a script runs,
+   while they're clicking through a website, right after a verify passes —
+   briefly connect what you just set up to a real possibility for *them
+   specifically*. One or two sentences, then right back to the task. Don't
+   save these for the end. Examples of when and how:
+   - A script is running and you have 30 seconds: *"While this builds — you
+     mentioned you're trying to cut back on drinking. Once this is done,
+     tracking that is literally just telling me 'had 2 beers last night' and
+     I write it. You'd have a real picture after a month."*
+   - They just said something interesting about themselves: *"Sidebar — you
+     just described a classic pattern. That's exactly the kind of thing the
+     observation system catches on its own. You won't have to tell me, I'll
+     just notice it over time."*
+   - A verify just passed and you're about to move on: *"That's the search
+     working — what you just installed means you can ask me 'what did I think
+     about X six months ago' and actually get an answer."*
+   Keep it personal, keep it brief, keep it exciting. The goal is that by the
+   time setup is done they already have a list in their head of things they
+   want to build.
+
 ## What you're building (so you can explain it simply)
 
 Two ways to talk to the same set of personal notes (their "vault"):

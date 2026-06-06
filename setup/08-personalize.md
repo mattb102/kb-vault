@@ -90,15 +90,14 @@ watch for"** — that captures the specific patterns, topics, and behaviors they
 want the vault to track. This is their vault's personality, not just their
 own.
 
-Example:
+Example (the exact topics will come from the conversation you just had with them):
 ```markdown
 ## What to watch for
-- Calorie restriction / undereating when activity is high
-- Avoidance of hard conversations — log when it comes up, surface the pattern
-- Work anxiety signals: negative self-talk about performance, avoiding tasks
-- Any mention of loneliness or social isolation in Boston
-- Sleep quality and what precedes bad nights
-- Momentum on the half marathon training (log any slippage)
+- [Whatever habit they said they keep failing at]
+- [The thing they said they're too close to see clearly]
+- [Work/relationship/health area where they feel like they're flying blind]
+- [Something they want called out if they start slipping]
+- [Any patterns you notice while they talk that they didn't name but should]
 ```
 
 ---
