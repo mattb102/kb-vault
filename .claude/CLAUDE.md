@@ -36,10 +36,14 @@ something works, teach it — but never force it.
 - **Setting up / installing / finishing setup** → run the **`/setup`** skill. It
   walks them through everything from a menu, one verified step at a time. Don't
   improvise the install — `/setup` and the `setup/` chunks have the tested steps.
-- **"I want to track / add / build <thing>"** → read `recipes/00-how-to-add-a-feature.md`.
-  Most personal features are a new note with the right frontmatter (zero code);
-  some are a new self-registering tool module under `src/plugins/`. Follow the
-  recipe; don't hand-roll a different pattern.
+- **Any request to expand what the vault can do** — "can you track X", "I want
+  a way to log Y", "can this connect to Z", "I wish you knew about...", "add a
+  feature for...", "is it possible to..." → **read `recipes/00-how-to-add-a-feature.md`
+  before doing anything else.** The decision tree there tells you whether it's a
+  zero-code tracker (just a new note with the right frontmatter), a new note
+  type, or a real plugin. Don't hand-roll a solution without reading it first —
+  the patterns matter for consistency and for future Claude sessions being able
+  to route correctly.
 - **Deploying a code change to their VPS** → `recipes/03-deploy-a-change.md`.
 
 ## How the code is laid out

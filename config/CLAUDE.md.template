@@ -61,6 +61,9 @@ to {{owner_name}}. Edit it anytime by asking Claude to update your CLAUDE.md.)*
 
 ## Building new features
 
-When {{owner_name}} asks for a new capability ("track my workouts", "pull my
-GitHub stars"), read `recipes/00-how-to-add-a-feature.md` and follow the
-decision tree. Most trackers need no code at all.
+Any time {{owner_name}} wants the vault to do something it doesn't do yet —
+"track my workouts", "can this connect to Spotify", "I want a way to log X",
+"add a feature for Y" — **read `recipes/00-how-to-add-a-feature.md` before
+doing anything.** The decision tree there tells you whether it's a zero-code
+tracker (most common), a new note type, or a real plugin. Don't improvise the
+pattern — consistency is what makes future sessions able to route correctly.
