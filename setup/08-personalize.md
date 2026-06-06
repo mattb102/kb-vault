@@ -269,4 +269,4 @@ effect.
 
 ## NEXT
 
-Tick `08`, then read `setup/09-verify-everything.md`.
+Tick `08`, then read `setup/08b-systems-tour.md`.

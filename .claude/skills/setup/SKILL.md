@@ -101,6 +101,7 @@ with a markdown checklist. Format:
 - [ ] 06 · Deploy server
 - [ ] 07 · Connect claude.ai
 - [ ] 08 · Personalize
+- [ ] 08b · Systems tour
 - [ ] 09 · Verify everything
 ```
 
