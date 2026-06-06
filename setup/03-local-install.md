@@ -38,9 +38,17 @@ repo creation if `gh` asks them to confirm.
    they'll use to actually browse and read their notes visually. Free, no
    account needed. "Go to obsidian.md and download it. Once it's open, click
    **Open folder as vault** and pick the `~/vault` folder we just created."
-   That's it — their notes are now browsable as a real notebook. They don't
-   *need* Obsidian for Claude to work, but without it their vault is just a
-   folder of files they can't easily look at.
+   Their notes are now browsable as a real notebook. They don't *need* Obsidian
+   for Claude to work, but without it the vault is just a folder of files they
+   can't look at.
+
+   > **Optional but recommended — obsidian-git.** This plugin shows their
+   > vault's git history and lets them manually sync from inside Obsidian (pull
+   > on mobile, see what changed, etc.). To install: in Obsidian, go to
+   > **Settings → Community plugins → turn off Safe mode → Browse**, search
+   > **obsidian-git**, install and enable it. No config needed — it picks up
+   > the existing git repo automatically. `[You'll do this]` if they want it;
+   > skip if they don't care.
 
 > **Optional — hosted embeddings.** Only if they explicitly chose OpenAI search
 > in chunk 02: add `EMBEDDING_PROVIDER=openai` and `OPENAI_API_KEY=sk-...` to
