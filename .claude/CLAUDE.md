@@ -20,8 +20,10 @@ and just help with whatever they ask.
 
 This is a self-hosted knowledge vault: a folder of markdown notes plus an MCP
 server that lets you (Claude) read and write them with semantic search,
-write-back, and AI observations. It runs locally over stdio for Claude Code, and
-optionally on a small VPS over HTTP for the claude.ai phone/web app.
+write-back, and AI observations. The notes are browsable in **Obsidian** (a
+free markdown notebook app — `obsidian.md`). The MCP server runs locally over
+stdio for Claude Code, and optionally on a small VPS over HTTP for the claude.ai
+phone/web app.
 
 **Assume the person running this is not a programmer.** They use Claude Code, but
 terms like SSH, systemd, and reverse proxy mean nothing to them — and that's

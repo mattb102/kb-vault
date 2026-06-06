@@ -34,6 +34,14 @@ repo creation if `gh` asks them to confirm.
    the vault. Then tell them to restart Claude Code so it picks up the new
    tools.
 
+4. `[You'll do this]` Install **Obsidian** if they haven't — it's the app
+   they'll use to actually browse and read their notes visually. Free, no
+   account needed. "Go to obsidian.md and download it. Once it's open, click
+   **Open folder as vault** and pick the `~/vault` folder we just created."
+   That's it — their notes are now browsable as a real notebook. They don't
+   *need* Obsidian for Claude to work, but without it their vault is just a
+   folder of files they can't easily look at.
+
 > **Optional — hosted embeddings.** Only if they explicitly chose OpenAI search
 > in chunk 02: add `EMBEDDING_PROVIDER=openai` and `OPENAI_API_KEY=sk-...` to
 > `.env` and the `.mcp.json` `env` block, then re-run the bootstrap to re-index.
@@ -48,8 +56,9 @@ In a fresh Claude Code session with the server connected, call:
 - `search_vault` with any query → returns results. (This proves the index +
   local embeddings are running end-to-end.)
 
-All three working = local install is done. Hype them up a little — this is
-the biggest step.
+All three working = local install is done. Tell them to open Obsidian and poke
+around — they should see their starter notes already there. Hype them up a
+little, this is the biggest step.
 
 ## TROUBLESHOOTING
 
