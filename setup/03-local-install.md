@@ -50,6 +50,15 @@ repo creation if `gh` asks them to confirm.
    > the existing git repo automatically. `[You'll do this]` if they want it;
    > skip if they don't care.
 
+> **Optional — weekly promote_patterns cron (local).** If they added an
+> `ANTHROPIC_API_KEY` to `.env`, `[I'll do this]` set up a weekly cron to
+> auto-synthesize observations into long-term patterns:
+> ```
+> (crontab -l 2>/dev/null; echo "0 4 * * 0 cd ~/kb-vault && npm run promote-patterns >> ~/vault-cron.log 2>&1") | crontab -
+> ```
+> Runs every Sunday at 4am. Skip if no key — they can run `npm run promote-patterns`
+> manually any time from the repo root.
+
 > **Optional — hosted embeddings.** Only if they explicitly chose OpenAI search
 > in chunk 02: add `EMBEDDING_PROVIDER=openai` and `OPENAI_API_KEY=sk-...` to
 > `.env` and the `.mcp.json` `env` block, then re-run the bootstrap to re-index.

@@ -45,15 +45,66 @@ trigger a read (which pulls first). Both surfaces should converge fast.
 - Anything red: walk it back to the chunk that owns that piece (search → 03/06,
   sync → GitHub remote, phone → 07).
 
-## You're done — now comes the fun part
+## You're done — give them the tour
 
-Tell them. Make it feel like a thing, because it is — they just built something
-real. Then introduce what comes next: **they can ask you to build new features
-for their vault.**
+Tell them, and make it feel like a thing. Then before you hand off to features,
+walk them through what the system already does — because there's a lot in the
+box they don't know about yet. Keep it conversational, not a doc dump. One
+capability at a time, maybe show it live.
 
-Read `recipes/00-how-to-add-a-feature.md` so you know the house patterns
-cold, then invite them to try: *"Want to track your gym workouts? Your reading?
-Your mood? Just ask me."* They don't need to touch code. They just have to
-know what they want.
+### The toolbox (walk through these)
 
-That's the system. It's theirs now.
+**Logging things**
+- `log_metric` — log any number over time: mood, weight, sleep hours, runs,
+  whatever. You just tell me "log my mood as a 7" and I write it. It shows up
+  in Obsidian as a table you can browse.
+- `log_stream` — a thought, a ramble, a brain-dump. Just talk and I capture it
+  dated and searchable forever.
+- `create_note` / `update_note` — for things that aren't logs: a page about a
+  person, a project, a trip.
+
+**Remembering you**
+- `get_identity` — every session I load who you are: your goals, values,
+  relationships, routines. This is why I can pick up where we left off.
+- `update_identity_field` — when something about you changes, I update it. You
+  don't have to re-explain yourself every conversation.
+
+**The observation system** — this is the part that makes it feel alive:
+- While we talk, I quietly log observations about patterns I notice — things
+  you say, moods, contradictions, what you're working through. You never see
+  me doing it, it just happens.
+- `get_observations` — you can ask me "what have you noticed about me lately?"
+  and I'll pull from the scratchpad.
+- `promote_patterns` — periodically, clusters of observations get synthesized
+  into long-term patterns ("Matt tends to avoid hard conversations", "fishing
+  is an escalating hobby"). This runs automatically every Sunday on your server
+  if you added an Anthropic API key, or you can trigger it manually anytime.
+  It's what makes the system get smarter about you over time instead of just
+  piling up raw notes.
+
+**Weekly summary**
+- Ask me "write my weekly summary" any time (Sunday evenings work well). I'll
+  pull your recent journals, stream entries, metrics, and observations and write
+  a summary + insights to your vault. Worth doing once a week if you want the
+  long-term picture to build up.
+
+**Search**
+- `search_vault` — semantic search across everything. Not keyword matching —
+  actual meaning. "times I felt anxious about work" will find relevant entries
+  even if those exact words aren't there.
+- `find_notes` / `recent_journals` / `search_by_date` — more targeted lookups
+  when you know roughly what you're looking for.
+
+**Nudges**
+- If you tell me you want to do something — "I should start meditating", "I
+  need to call my dad" — I log it as a nudge. I'll bring it up in future
+  sessions if you haven't followed through. It's not nagging, it's a light
+  "hey, remember you wanted to do this."
+
+### Now — build new things
+
+Read `recipes/00-how-to-add-a-feature.md` so you know the house patterns,
+then invite them to try. Most trackers are zero code. *"Want to track your gym
+workouts? Your reading? Your mood swings? Just ask."*
+
+That's the system. It's theirs.

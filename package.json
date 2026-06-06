@@ -9,7 +9,8 @@
     "start": "node build/index.js",
     "dev": "tsx src/index.ts",
     "index-vault": "tsx scripts/index-vault.ts",
-    "generate-identity": "tsx scripts/generate-identity.ts"
+    "generate-identity": "tsx scripts/generate-identity.ts",
+    "promote-patterns": "tsx scripts/promote-patterns.ts"
   },
   "keywords": ["mcp", "knowledge-base", "vault", "rag"],
   "author": "",
