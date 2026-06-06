@@ -10,6 +10,7 @@
     "dev": "tsx src/index.ts",
     "index-vault": "tsx scripts/index-vault.ts",
     "generate-identity": "tsx scripts/generate-identity.ts",
+    "rebuild-identity": "tsx scripts/rebuild-identity.ts",
     "promote-patterns": "tsx scripts/promote-patterns.ts"
   },
   "keywords": ["mcp", "knowledge-base", "vault", "rag"],

@@ -124,14 +124,21 @@ fi
 sudo systemctl reload caddy || sudo systemctl restart caddy
 ok "Caddy configured (TLS provisions automatically on first request)"
 
-# ── 8. cron — weekly promote_patterns ───────────────────────────────
-# Only installs if ANTHROPIC_API_KEY is present in .env.
+# ── 8. cron — promote_patterns + nightly identity rebuild ───────────
+# Both only install if ANTHROPIC_API_KEY is present in .env.
 if grep -q "^ANTHROPIC_API_KEY=sk-" "$REPO/.env" 2>/dev/null; then
-  CRON_JOB="0 4 * * 0 cd $REPO && VAULT_PATH=$VAULT_PATH npm run promote-patterns >> /var/log/vault-cron.log 2>&1"
-  ( crontab -l 2>/dev/null | grep -v "promote-patterns"; echo "$CRON_JOB" ) | crontab -
-  ok "Cron installed: promote_patterns runs every Sunday at 4am"
+  # Weekly patterns synthesis — Sunday 4am
+  PROMOTE_CRON="0 4 * * 0 cd $REPO && VAULT_PATH=$VAULT_PATH npm run promote-patterns >> /var/log/vault-cron.log 2>&1"
+  # Nightly identity rebuild — every night 4:05am (after promote on Sunday)
+  IDENTITY_CRON="5 4 * * * bash $REPO/scripts/cron-rebuild-identity.sh >> /var/log/vault-cron.log 2>&1"
+  (
+    crontab -l 2>/dev/null | grep -v "promote-patterns" | grep -v "cron-rebuild-identity"
+    echo "$PROMOTE_CRON"
+    echo "$IDENTITY_CRON"
+  ) | crontab -
+  ok "Crons installed: promote_patterns (Sun 4am) + identity rebuild (nightly 4:05am)"
 else
-  echo "  (Skipping promote_patterns cron — ANTHROPIC_API_KEY not set in .env."
+  echo "  (Skipping crons — ANTHROPIC_API_KEY not set in .env."
   echo "   Add the key and re-run to enable. See comments in .env.)"
 fi
 

@@ -111,14 +111,24 @@ and the repo root so every future session loads it.
 
 ---
 
-## STEP 4 — Rebuild the identity summary
+## STEP 4 — Build the identity summary
 
-`[I'll do this]`:
+`[I'll do this]` — if they have an `ANTHROPIC_API_KEY` in `.env`, use the
+AI-powered version that synthesizes Core notes + patterns + observations:
+```
+npm run rebuild-identity
+```
+If not (no API key yet), use the mechanical fallback:
 ```
 npm run generate-identity
 ```
-This turns the `Core/` notes into a compact `Core/core-identity.md` that gets
-loaded every session — the vault's compressed memory of who they are.
+Either way, this produces `Core/core-identity.md` — the vault's compressed
+memory of who they are, loaded at the start of every session.
+
+The AI rebuild is the better version: it synthesizes across all three sources
+and writes prose, not just concatenated bullet points. Once they add an
+`ANTHROPIC_API_KEY` later (required for `promote_patterns` anyway), the nightly
+cron will keep this file fresh automatically.
 
 ---
 

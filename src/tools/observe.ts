@@ -9,6 +9,7 @@ import {
   writeWeeklySummary,
 } from "../core/observer.js";
 import { promotePatterns } from "../core/promoter.js";
+import { rebuildIdentity } from "../core/identity.js";
 
 /**
  * Register the AI-observation tools: the scratchpad/pattern/nudge system plus
@@ -158,6 +159,40 @@ export function register(server: McpServer): void {
         windowDays: window_days,
       });
       return { content: [{ type: "text", text: result }] };
+    }
+  );
+
+  server.tool(
+    "rebuild_identity",
+    "Re-synthesize Core/core-identity.md as a rolling aggregate from the hand-maintained Core notes (hard facts) + distilled patterns + recent scratchpad observations. Use when the identity summary has gone stale. Requires ANTHROPIC_API_KEY.",
+    {
+      dry_run: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("Generate and return the new document without writing it to disk."),
+      scratchpad_days: z
+        .number()
+        .optional()
+        .default(30)
+        .describe("How many days of recent observations to feed into the synthesis (default 30)."),
+    },
+    async ({ dry_run, scratchpad_days }) => {
+      try {
+        const result = await rebuildIdentity({
+          dryRun: dry_run,
+          scratchpadDays: scratchpad_days,
+        });
+        const header = dry_run
+          ? "DRY RUN — not written.\n\n"
+          : `Wrote ${result.path} (patterns=${result.sources.patterns}, observationDays=${result.sources.observationDays}).\n\n`;
+        return { content: [{ type: "text", text: header + result.doc }] };
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: err?.message || String(err) }],
+          isError: true,
+        };
+      }
     }
   );
 }

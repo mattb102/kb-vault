@@ -76,11 +76,16 @@ capability at a time, maybe show it live.
 - `get_observations` — you can ask me "what have you noticed about me lately?"
   and I'll pull from the scratchpad.
 - `promote_patterns` — periodically, clusters of observations get synthesized
-  into long-term patterns ("Matt tends to avoid hard conversations", "fishing
-  is an escalating hobby"). This runs automatically every Sunday on your server
-  if you added an Anthropic API key, or you can trigger it manually anytime.
-  It's what makes the system get smarter about you over time instead of just
-  piling up raw notes.
+  into long-term patterns. Runs automatically every Sunday on your server if you
+  added an Anthropic API key, or trigger it manually anytime. It's what makes
+  the system get smarter about you over time instead of just piling up raw notes.
+- `rebuild_identity` — re-synthesizes your identity summary from scratch: pulls
+  your Core notes (hard facts), your distilled patterns, and the last 30 days of
+  observations, and rewrites `Core/core-identity.md` as a single coherent
+  portrait of who you are *right now*. This runs nightly on your VPS (4:05am,
+  after Sunday's pattern synthesis). You can also call it manually — useful after
+  a big life change or after your first month of observations have accumulated.
+  Requires `ANTHROPIC_API_KEY`.
 
 **Weekly summary**
 - Ask me "write my weekly summary" any time (Sunday evenings work well). I'll
