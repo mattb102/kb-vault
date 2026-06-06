@@ -176,6 +176,59 @@ something new, create the metric file now.
 
 ---
 
+## 7. Cron jobs — scheduled things that just happen
+
+> "Your VPS runs 24/7. That means you can set things up to happen automatically
+> on a schedule — every morning, every Sunday, whatever. You already have two:
+> pattern synthesis runs Sunday at 4am, and identity rebuild runs every night
+> at 4:05am. But those are just the defaults. You can add whatever you want."
+
+> "The syntax for this stuff is kind of ugly, but you don't have to write it —
+> I can. You just tell me what you want to happen and when."
+
+Give them a few examples to spark ideas:
+
+> "Like — every Monday morning, automatically write a weekly summary into your
+> vault so it's there when you open it. Or every night at midnight, pull the
+> latest vault from GitHub so your VPS is always in sync even if you forgot to
+> push. Or every Sunday, generate a metrics digest and drop it in your journal.
+> Or a reminder note at the start of every month to review your goals."
+
+> "Anything that's repetitive, time-based, and produces something you'd want
+> to exist — that's a cron job."
+
+Then ask:
+> "Is there anything you'd want to just... happen? Like something you keep
+> forgetting to do, or something you'd want a fresh version of every week?"
+
+`[I'll do this]` If they name something reasonable, write the cron right now.
+The pattern is:
+1. Write a small script in `scripts/` that does the thing (usually just calls
+   an existing npm script or vault operation)
+2. Add it to crontab on the VPS: `crontab -e` or append via `crontab -l | ...`
+3. Test it by running the script manually first
+
+Cron time syntax cheat sheet (so you can explain it if they ask):
+```
+*  *  *  *  *   command
+│  │  │  │  └── day of week (0=Sun)
+│  │  │  └───── month
+│  │  └──────── day of month
+│  └─────────── hour (0-23)
+└────────────── minute
+```
+Common patterns:
+- Every day at 8am: `0 8 * * *`
+- Every Sunday at noon: `0 12 * * 0`
+- First of every month: `0 9 1 * *`
+- Every weekday morning: `0 7 * * 1-5`
+
+You don't need to teach all of this — just write the cron and tell them what
+it does. The point is they leave knowing this is possible and that asking for
+one is a one-sentence request.
+
+---
+
 ## Wrap-up
 
 After the tour, ask one final question:
