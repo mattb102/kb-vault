@@ -51,6 +51,14 @@ how everything is routed — tools find files by `type`, not by guessing paths.
 
 {{enabled_plugins}}
 
+## What to watch for
+
+{{watch_for}}
+
+*(This section is filled in during personalization — chunk 08. It tells you
+which patterns, behaviors, and topics to actively notice and log while talking
+to {{owner_name}}. Edit it anytime by asking Claude to update your CLAUDE.md.)*
+
 ## Building new features
 
 When {{owner_name}} asks for a new capability ("track my workouts", "pull my
