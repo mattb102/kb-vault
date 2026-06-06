@@ -113,22 +113,30 @@ and the repo root so every future session loads it.
 
 ## STEP 4 — Build the identity summary
 
-`[I'll do this]` — if they have an `ANTHROPIC_API_KEY` in `.env`, use the
-AI-powered version that synthesizes Core notes + patterns + observations:
+**Tell them this before running anything:**
+
+> "There are two versions of this. The basic one just flattens your notes into
+> a single file — it's fine, but it's dumb. The good one uses Claude to actually
+> *synthesize* your notes, your patterns, and your recent observations into a
+> single document that reflects who you are right now. Like, if you've been
+> tracking a habit change for two months, the basic one won't know that — the
+> smart one will bake it in. The smart one needs an Anthropic API key though."
+
+If they have `ANTHROPIC_API_KEY` in `.env`, `[I'll do this]` run the smart version:
 ```
 npm run rebuild-identity
 ```
-If not (no API key yet), use the mechanical fallback:
+If not, run the fallback:
 ```
 npm run generate-identity
 ```
-Either way, this produces `Core/core-identity.md` — the vault's compressed
-memory of who they are, loaded at the start of every session.
+Either produces `Core/core-identity.md` — loaded every session so the vault
+knows who they are without re-explaining.
 
-The AI rebuild is the better version: it synthesizes across all three sources
-and writes prose, not just concatenated bullet points. Once they add an
-`ANTHROPIC_API_KEY` later (required for `promote_patterns` anyway), the nightly
-cron will keep this file fresh automatically.
+If you ran the fallback, **tell them**: once they add an Anthropic API key
+(which they'll need for `promote_patterns` anyway — it's the same key), run
+`npm run rebuild-identity` from the repo and they'll get the real version. The
+nightly cron will keep it fresh from then on.
 
 ---
 
