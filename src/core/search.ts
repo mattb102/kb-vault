@@ -7,7 +7,13 @@ let table: lancedb.Table | null = null;
 
 const TABLE_NAME = "vault_chunks";
 
-async function getTable(): Promise<lancedb.Table | null> {
+async function getTable(fresh = false): Promise<lancedb.Table | null> {
+  if (fresh) {
+    // A reindex process drops and recreates the table externally, leaving any
+    // cached handle pointing at deleted fragments. Force a reconnect.
+    table = null;
+    db = null;
+  }
   if (table) return table;
   try {
     db = await lancedb.connect(config.dbPath);
@@ -36,18 +42,29 @@ export async function vectorSearch(
   limit: number = config.searchDefaults.limit,
   typeFilter?: string
 ): Promise<SearchResult[]> {
-  const t = await getTable();
-  if (!t) return [];
-
   const queryVector = await embed(query, "query");
 
-  let queryBuilder = t.search(queryVector).limit(limit);
+  const run = async (t: lancedb.Table) => {
+    let queryBuilder = t.search(queryVector).limit(limit);
+    if (typeFilter) {
+      queryBuilder = queryBuilder.where(`type = '${typeFilter.replace(/'/g, "''")}'`);
+    }
+    return queryBuilder.toArray();
+  };
 
-  if (typeFilter) {
-    queryBuilder = queryBuilder.where(`type = '${typeFilter.replace(/'/g, "''")}'`);
+  let t = await getTable();
+  if (!t) return [];
+
+  let results: any[];
+  try {
+    results = await run(t);
+  } catch (err) {
+    // A reindex cron can drop and recreate the table in a separate process,
+    // stranding the cached handle. Reopen once and retry before giving up.
+    t = await getTable(true);
+    if (!t) throw err;
+    results = await run(t);
   }
-
-  const results = await queryBuilder.toArray();
 
   return results.map((row: any) => ({
     id: row.id,

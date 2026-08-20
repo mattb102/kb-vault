@@ -229,6 +229,7 @@ multi-select):
 - **calendar** — connect Google Calendar (needs an extra setup step)
 - **mal** — track anime and manga you're watching/reading
 - **espn** — fantasy sports
+- **claude_code** — run Claude Code tasks from inside a vault session (needs the Claude CLI installed on the VPS and subscription auth configured)
 
 `[I'll do this]` Set `enabledPlugins` in `config/config.yaml` to what they
 want. Plugins they don't enable stay on disk but don't run — they can add

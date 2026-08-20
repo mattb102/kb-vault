@@ -179,9 +179,21 @@ something new, create the metric file now.
 ## 7. Cron jobs — scheduled things that just happen
 
 > "Your VPS runs 24/7. That means you can set things up to happen automatically
-> on a schedule — every morning, every Sunday, whatever. You already have two:
-> pattern synthesis runs Sunday at 4am, and identity rebuild runs every night
-> at 4:05am. But those are just the defaults. You can add whatever you want."
+> on a schedule — every morning, every Sunday, whatever. Bootstrap installs two
+> by default — pattern synthesis Sunday at 4am and identity rebuild nightly at
+> 4:05am — but only if `ANTHROPIC_API_KEY` was in `.env` when you ran it."
+
+`[I'll do this]` Check: `crontab -l` on the VPS. You should see both entries.
+If they're missing (because the API key was added later), install them now:
+
+```
+(crontab -l 2>/dev/null; echo "0 4 * * 0 cd ~/kb-vault && npm run promote-patterns >> ~/logs/patterns.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "5 4 * * * cd ~/kb-vault && npm run rebuild-identity >> ~/logs/identity.log 2>&1") | crontab -
+```
+
+Then verify with `crontab -l` again.
+
+> "Those are just the defaults. You can add whatever you want."
 
 > "The syntax for this stuff is kind of ugly, but you don't have to write it —
 > I can. You just tell me what you want to happen and when."

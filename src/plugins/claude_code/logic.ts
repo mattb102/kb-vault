@@ -40,6 +40,13 @@ export async function runClaudeCode({
     throw new Error(`Working directory does not exist or is not a directory: ${cwd}`);
   }
 
+  // The CLI prioritizes ANTHROPIC_API_KEY over subscription/OAuth. If the
+  // server's .env has a key (used for pattern synthesis), the CLI silently
+  // bills that API account instead of the user's Claude subscription. Strip it
+  // so the CLI falls through to CLAUDE_CODE_OAUTH_TOKEN / stored credentials.
+  const env = { ...process.env };
+  delete env.ANTHROPIC_API_KEY;
+
   return new Promise((resolvePromise, reject) => {
     const start = Date.now();
     const child = spawn(
@@ -47,7 +54,7 @@ export async function runClaudeCode({
       ["--print", "--dangerously-skip-permissions", task],
       // stdin from /dev/null ("ignore") gives `claude --print` an immediate EOF
       // so it doesn't hang waiting for piped stdin that we never write to.
-      { cwd, env: process.env, stdio: ["ignore", "pipe", "pipe"] }
+      { cwd, env, stdio: ["ignore", "pipe", "pipe"] }
     );
 
     let stdout = "";
