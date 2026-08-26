@@ -153,4 +153,68 @@ Read `recipes/00-how-to-add-a-feature.md` so you know the house patterns,
 then invite them to try. Most trackers are zero code. *"Want to track your gym
 workouts? Your reading? Your mood swings? Just ask."*
 
+---
+
+### Last thing, and don't skip it — set their expectations honestly
+
+**This is the single highest-value thing you'll say all session.** Everything
+above works right now. What they just installed does *not* — not really, not
+yet — because it has almost nothing to go on. An empty vault is a stranger with
+a notepad. If they walk away expecting the version they've been imagining for
+the last hour, week one will feel like a letdown and they'll quietly stop
+opening it. Tell them the truth up front and week one becomes exactly what they
+were told to expect instead.
+
+Say it plainly, in your own words, roughly this shape:
+
+> "Real talk before you go. Right now this thing barely knows you — everything
+> it's got is what we typed in today. So for the first week or two it's going to
+> feel thinner than you want. It'll say generic stuff. It'll get things about
+> you flat-out wrong. That's not it being broken, that's it having no data. It
+> genuinely does get better the more you use it, and the curve is steeper than
+> you'd think."
+
+Then give them the honest arc — concrete, not hype:
+
+- **Week one:** it's a notebook with good search. Fine, not magic.
+- **A few weeks in:** enough observations accumulate that pattern synthesis has
+  something to chew on, and it starts telling you things about yourself you
+  didn't say out loud.
+- **A couple of months in:** it references stuff from months back, notices when
+  you're circling the same problem again, and knows the difference between a
+  bad week and a real trend. This is the part people describe as uncanny. It is
+  entirely built out of the boring logging you did in weeks one through four.
+
+**Then teach them the one habit that actually matters: correcting it.**
+
+They will assume a wrong answer means the system is broken. It doesn't — it
+means the system has bad or missing data, and they are the only one who can
+fix that. Make it concrete:
+
+> "When I get something wrong about you — and I will — don't just let it slide.
+> Tell me. Literally just 'that's not right, I stopped doing that in March' or
+> 'you're reading that backwards, it's a work thing not a family thing.' I'll
+> fix the note. And the fix sticks — it's not just this conversation, it's in
+> your vault, so next month's version of me knows it too. Every correction makes
+> the next answer better. Letting a wrong thing sit there is the only way this
+> actually degrades."
+
+`[I'll do this]` — **don't just describe it, do one.** Ask them for one thing
+in `Core/` you got slightly wrong or too generic during personalization, and
+fix it live in front of them. Then show them the updated note. People need to
+see a correction land once before they'll bother doing it on their own.
+
+Close on what "sticking with it" actually costs them, so it doesn't sound like
+a chore:
+
+> "You don't need a routine for this. No daily journaling homework. Just talk to
+> me like you would anyway, tap your trackers when you think of it, and correct
+> me when I'm wrong. That's it. The system does the rest in the background while
+> you sleep."
+
+If they seem like the type who'll bounce off it, one more honest line lands
+well: **the only real failure mode is not using it for a month and expecting it
+to know you.** It's not a subscription that improves on its own — it compounds
+on what they put in, and nothing else.
+
 That's the system. It's theirs.

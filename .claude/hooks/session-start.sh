@@ -45,4 +45,21 @@ DIRTY=""
 echo "[vault] UPDATE AVAILABLE: this copy is ${BEHIND} commit(s) behind origin/${BRANCH}.${DIRTY}"
 echo "[vault] Recent upstream changes:"
 git log --no-merges --format='  - %s' "HEAD..origin/$BRANCH" 2>/dev/null | head -8
+
+# Did the incoming commits touch the install instructions? If so, and this
+# person has already been through setup, they may have ticked off a chunk that
+# has since grown a step they will never otherwise see. setup/CHANGELOG.md is
+# what tells you which of those need retro-active action.
+SETUP_TOUCHED="$(git diff --name-only "HEAD..origin/$BRANCH" -- setup/ .claude/skills/setup/ 2>/dev/null | head -20)"
+if [ -n "$SETUP_TOUCHED" ]; then
+  if [ -f setup/.progress.md ]; then
+    echo "[vault] ⚠ The setup instructions changed in this update, and this person has already done setup."
+    echo "[vault] After updating, read setup/CHANGELOG.md and run the catch-up for entries newer than"
+    echo "[vault] the 'Installed at commit' recorded in setup/.progress.md. Steps added to chunks they"
+    echo "[vault] already ticked off are invisible to them otherwise."
+  else
+    echo "[vault] (Setup instructions changed upstream; no setup/.progress.md here, so nothing to catch up.)"
+  fi
+fi
+
 echo "[vault] Offer the update to the user before doing other work (see 'Check for updates' in .claude/CLAUDE.md). Do not pull without asking."

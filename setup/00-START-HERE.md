@@ -41,6 +41,16 @@ about to break something.
    how you pick up exactly where you left off without asking them to repeat
    themselves. Create it now if it doesn't exist.
 
+   **Record `Installed at commit: <git rev-parse --short HEAD>` in the Notes
+   section**, and update it whenever you finish a chunk. These instructions get
+   revised over time; that line is the only way a future session can work out
+   which revisions this person has actually seen. Without it, a step added later
+   to a chunk they already ticked off is invisible to them permanently. See
+   `setup/CHANGELOG.md`.
+
+   Secrets never go in this file — no tokens, no passphrases, no API keys. It
+   records *what* they're waiting on and *where they got to*, not credentials.
+
 5. **No jargon without a translation.** If you have to use a tech term, define
    it in the same breath. And when something looks scary — "this next screen
    has 14 fields" — tell them exactly which two to touch and ignore the rest.

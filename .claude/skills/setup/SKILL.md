@@ -47,8 +47,29 @@ it. Say what it was, why it mattered, and what to check — rule 8 in
 `setup/00-START-HERE.md` has the exact shape, and a real friend really did get
 asked "how's Hetzner coming along?" and had no idea what was being asked.
 
-If `.progress.md` exists but **all chunks are checked**, they're done. Tell
-them, offer to add features (`recipes/`), or help debug something.
+If `.progress.md` exists but **all chunks are checked**, they're done. Before
+you offer anything else, do the catch-up check below — "done" is only true as
+of the version they installed. Then tell them, offer to add features
+(`recipes/`), or help debug something.
+
+### Either way: check for missed steps first
+
+The chunk list ticks by number, so a step added to chunk `01` *after* they
+finished `01` will never resurface on its own — not on resume, not after a
+`git pull`, never. Whenever you open `.progress.md`:
+
+1. Read `Installed at commit: <sha>` from its Notes. (Missing? They set up
+   before that was recorded — ask roughly when, or check the first commit in
+   their vault repo, and treat everything in the changelog as potentially
+   relevant.)
+2. `git log --oneline <sha>..HEAD -- setup/` — if that's empty, nothing to do.
+3. If it isn't, read **`setup/CHANGELOG.md`** and run the catch-up for every
+   entry newer than their commit. Each entry tells you how to check whether
+   this person is actually affected; most will be no-ops.
+4. Update `Installed at commit` to the current `git rev-parse --short HEAD`.
+
+Do this *before* resuming their chunk or starting new work. A missed step from
+chunk 01 will usually surface later as a confusing failure in chunk 06.
 
 ### Case B — no `.progress.md` (fresh install or unknown state)
 
@@ -73,6 +94,7 @@ Menu options:
 - 💻 **Local only** — just this computer, no server stuff
 - 🔧 **Add a feature to my vault**
 - 🩺 **Something's broken — help**
+- 🔄 **I already set this up — did I miss anything new?**
 - 📖 **Wait... what even is this?**
 
 Route on their pick:
@@ -87,7 +109,11 @@ Route on their pick:
   build it.
 - **Something's broken** → ask what's up, then check `setup/.progress.md` if
   it exists to see how far they got, and debug from the TROUBLESHOOTING notes
-  in the relevant chunk.
+  in the relevant chunk. Run the catch-up check too — a surprising share of
+  "it's broken" is actually "a step that didn't exist when I installed".
+- **Did I miss anything new** → run the catch-up check in Case A against
+  `setup/CHANGELOG.md`. If they're current, say so in one line rather than
+  inventing work.
 - **What is this** → give 'em the 30-second pitch (a private notebook that
   you — their AI — can read and write, on their computer and their phone),
   then show the menu again.
@@ -124,6 +150,7 @@ session cleanly even weeks later:
 
 ```markdown
 ## Notes
+- Installed at commit: a1b2c3d
 - OS: Ubuntu (WSL2)
 - Vault GitHub repo: https://github.com/...
 - DuckDNS domain: yourname-vault.duckdns.org

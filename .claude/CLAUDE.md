@@ -51,6 +51,19 @@ Then, **if they have the VPS half set up, the server needs the same treatment**
 laptop does nothing for their phone. Over SSH: same three commands in
 `~/kb-vault`, then `sudo systemctl restart vault`.
 
+**After the pull succeeds, check whether they missed anything.** The setup
+chunks grow over time, and their checklist ticks chunks by number — so a step
+added to chunk `01` after they finished `01` is invisible to them forever, even
+though they just pulled it. If `setup/.progress.md` exists (they have done some
+or all of setup), read **`setup/CHANGELOG.md`** and work any entry newer than
+the `Installed at commit` recorded in their progress file. The hook flags this
+for you when the update touches `setup/`, but do the check whenever you pull —
+the flag is a convenience, not the mechanism.
+
+Most catch-up entries are things you just quietly do (a missing cron, a config
+default). Only bring a person into it when it needs their decision or their
+hands. Update `Installed at commit` when you're done so it doesn't re-run.
+
 Rules:
 - **Never pull without asking**, and never over uncommitted changes — if the
   hook reported local changes, show them what's modified and let them decide.
