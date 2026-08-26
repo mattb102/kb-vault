@@ -11,9 +11,15 @@
     "index-vault": "tsx scripts/index-vault.ts",
     "generate-identity": "tsx scripts/generate-identity.ts",
     "rebuild-identity": "tsx scripts/rebuild-identity.ts",
-    "promote-patterns": "tsx scripts/promote-patterns.ts"
+    "promote-patterns": "tsx scripts/promote-patterns.ts",
+    "morning-report": "tsx scripts/morning-report.ts"
   },
-  "keywords": ["mcp", "knowledge-base", "vault", "rag"],
+  "keywords": [
+    "mcp",
+    "knowledge-base",
+    "vault",
+    "rag"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -27,11 +33,13 @@
     "openai": "^6.39.1",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
+    "web-push": "^3.6.7",
     "yaml": "^2.6.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@types/web-push": "^3.6.4",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }

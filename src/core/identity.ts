@@ -7,7 +7,7 @@ import { frontmatterIndex } from "./frontmatter.js";
 import { readScratchpad, PATTERNS_REL, renderEntry } from "./scratchpad.js";
 import { today } from "./utils.js";
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-4-8";
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5";
 const DEFAULT_SCRATCHPAD_DAYS = 30;
 const IDENTITY_REL = "Core/core-identity.md";
 

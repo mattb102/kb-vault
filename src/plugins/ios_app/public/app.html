@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#11131a">
+<link rel="manifest" href="/app/manifest.webmanifest">
+<title>Vault</title>
+<style>
+  :root {
+    --bg: #11131a; --card: #191d27; --line: #2a3040;
+    --text: #e8ecf5; --dim: #93a0b8; --accent: #7dd3fc; --ok: #6ee7a8; --bad: #fca5a5;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .muted { color: var(--dim); font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 16px; margin: 0 0 4px; }
+  .prompt { color: var(--dim); font-size: 13px; margin: 0 0 12px; }
+  .scale { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: inherit; color: var(--text); background: #222836;
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 0; min-width: 44px; flex: 1 0 44px; cursor: pointer;
+  }
+  button:active { background: #2c3345; }
+  button.on { background: var(--accent); border-color: var(--accent); color: #0b1017; font-weight: 600; }
+  button.wide { flex: 1 0 100%; padding: 13px; }
+  input {
+    font: inherit; width: 100%; color: var(--text); background: #222836;
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  .row button { flex: 0 0 auto; padding: 12px 18px; min-width: 0; }
+  .hist { margin-top: 12px; font-size: 13px; color: var(--dim); display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist span { background: #222836; border-radius: 6px; padding: 3px 7px; }
+  .status { min-height: 20px; font-size: 13px; margin-top: 10px; }
+  .status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
+  .hide { display: none; }
+
+  /* Add-to-home-screen prompt. On iOS this is not a nicety: notifications are
+     only delivered to an installed home-screen app, never to a Safari tab. */
+  #install {
+    position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom));
+    background: #1d2432; border: 1px solid var(--accent); border-radius: 16px;
+    padding: 16px; box-shadow: 0 12px 32px rgba(0, 0, 0, .55); z-index: 50;
+  }
+  #install h3 { margin: 0 0 6px; font-size: 15px; color: var(--accent); }
+  #install p { margin: 0 0 12px; font-size: 13px; color: var(--dim); }
+  #install .steps { margin: 0 0 12px; padding-left: 18px; font-size: 13px; color: var(--text); }
+  #install .steps li { margin-bottom: 3px; }
+  #install .row { gap: 8px; }
+  #install .row button { flex: 1; }
+  #installLater { background: transparent; border-color: transparent; color: var(--dim); }
+  .share { display: inline-block; transform: translateY(2px); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="title">Vault</h1>
+  <span class="muted" id="date"></span>
+</header>
+
+<!-- Sign-in. The token is stored on this device only. -->
+<section id="gate" class="card">
+  <h2>Connect this phone</h2>
+  <p class="prompt">Paste the app token from your <code>.env</code> (APP_TOKEN). It stays on this device.</p>
+  <div class="row">
+    <input id="token" type="password" placeholder="App token" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button id="connect">Go</button>
+  </div>
+  <div id="gateStatus" class="status"></div>
+</section>
+
+<main id="app" class="hide"></main>
+
+<section id="notifyCard" class="card hide">
+  <h2>Notifications</h2>
+  <p class="prompt" id="notifyHint">Get nudges and your morning report on this phone.</p>
+  <button id="notify" class="wide">Enable notifications</button>
+  <div id="notifyStatus" class="status"></div>
+</section>
+
+<p class="muted" id="footer"></p>
+
+<aside id="install" class="hide">
+  <h3 id="installTitle">Add this to your home screen</h3>
+  <p id="installWhy">It opens like a real app — and on iPhone it's the only way notifications can reach you.</p>
+  <ol class="steps" id="installSteps">
+    <li>Tap the Share button <svg class="share" width="13" height="16" viewBox="0 0 13 16" fill="none" stroke="#7dd3fc" stroke-width="1.6" aria-hidden="true"><path d="M6.5 10.5V1.5M6.5 1.5 3.5 4.5M6.5 1.5 9.5 4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 7H1v7.5h11V7h-1" stroke-linecap="round"/></svg> at the bottom of Safari.</li>
+    <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+    <li>Open it again from the new icon.</li>
+  </ol>
+  <div class="row">
+    <button id="installGo" class="hide">Install</button>
+    <button id="installLater">Not now</button>
+  </div>
+</aside>
+
+<script>
+(function () {
+  var KEY = 'vault-app-token';
+  var token = localStorage.getItem(KEY) || '';
+  var cfg = null;
+  var el = function (id) { return document.getElementById(id); };
+
+  el('date').textContent = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
+    return fetch(path, opts).then(function (r) {
+      return r.json().then(function (body) {
+        if (!r.ok) throw new Error(body && body.error ? body.error : 'HTTP ' + r.status);
+        return body;
+      });
+    });
+  }
+
+  function say(node, msg, cls) {
+    node.textContent = msg;
+    node.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  function todayISO() {
+    var d = new Date();
+    // Local calendar date, not UTC — logging at 9pm should not land on tomorrow.
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  }
+
+  // ── trackers ──
+  function renderTracker(t) {
+    var card = document.createElement('section');
+    card.className = 'card';
+
+    var h = document.createElement('h2');
+    h.textContent = t.label;
+    card.appendChild(h);
+
+    if (t.prompt) {
+      var p = document.createElement('p');
+      p.className = 'prompt';
+      p.textContent = t.prompt;
+      card.appendChild(p);
+    }
+
+    var status = document.createElement('div');
+    status.className = 'status';
+
+    function submit(value, btn) {
+      say(status, 'Saving…');
+      api('/app/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracker: t.id, value: value, date: todayISO() })
+      }).then(function (r) {
+        say(status, r.result === 'updated' ? "Updated today's entry." : 'Logged.', 'ok');
+        if (btn) {
+          Array.prototype.forEach.call(card.querySelectorAll('button'), function (b) { b.classList.remove('on'); });
+          btn.classList.add('on');
+        }
+        loadHistory();
+      }).catch(function (e) { say(status, e.message, 'bad'); });
+    }
+
+    if (t.kind === 'scale' || t.kind === 'yesno') {
+      var wrap = document.createElement('div');
+      wrap.className = 'scale';
+      var opts = [];
+      if (t.kind === 'yesno') {
+        opts = [{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }];
+      } else {
+        for (var v = t.min; v <= t.max; v++) opts.push({ label: String(v), value: v });
+      }
+      opts.forEach(function (o) {
+        var b = document.createElement('button');
+        b.textContent = o.label;
+        if (t.kind === 'yesno') b.className = 'wide';
+        b.onclick = function () { submit(o.value, b); };
+        wrap.appendChild(b);
+      });
+      card.appendChild(wrap);
+    } else {
+      var row = document.createElement('div');
+      row.className = 'row';
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.inputMode = 'decimal';
+      input.placeholder = t.unit ? t.label + ' (' + t.unit + ')' : t.label;
+      var go = document.createElement('button');
+      go.textContent = 'Log';
+      go.onclick = function () {
+        if (input.value === '') return say(status, 'Enter a number first.', 'bad');
+        submit(Number(input.value), null);
+        input.value = '';
+      };
+      row.appendChild(input);
+      row.appendChild(go);
+      card.appendChild(row);
+    }
+
+    card.appendChild(status);
+
+    var hist = document.createElement('div');
+    hist.className = 'hist';
+    card.appendChild(hist);
+
+    function loadHistory() {
+      api('/app/entries?tracker=' + encodeURIComponent(t.id)).then(function (r) {
+        hist.innerHTML = '';
+        (r.entries || []).slice(0, 10).reverse().forEach(function (e) {
+          var s = document.createElement('span');
+          s.textContent = e.date.slice(5) + ' · ' + e.value;
+          hist.appendChild(s);
+        });
+      }).catch(function () { /* history is a nicety — never block logging on it */ });
+    }
+    loadHistory();
+
+    return card;
+  }
+
+  function renderApp() {
+    el('title').textContent = cfg.title;
+    document.title = cfg.title;
+    var app = el('app');
+    app.innerHTML = '';
+    if (!cfg.trackers.length) {
+      var empty = document.createElement('section');
+      empty.className = 'card';
+      empty.innerHTML = '<h2>No trackers yet</h2><p class="prompt">Ask Claude to add one — "track my mood on this app" — and it will edit config.yaml for you.</p>';
+      app.appendChild(empty);
+    }
+    cfg.trackers.forEach(function (t) { app.appendChild(renderTracker(t)); });
+    app.classList.remove('hide');
+    el('gate').classList.add('hide');
+    el('notifyCard').classList.remove('hide');
+    el('footer').textContent = cfg.devices + ' device(s) receiving notifications.';
+    if (standalone) {
+      el('notifyHint').textContent = 'Get nudges and your morning report on this phone.';
+    } else {
+      el('notifyHint').textContent =
+        'Add this to your home screen first — notifications only reach an installed app.';
+      showInstall(false);
+    }
+  }
+
+  // ── notifications ──
+  function urlB64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(base64);
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  var standalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var deferredPrompt = null;
+
+  // Chrome/Edge fire this when the app is installable; Safari never does, which
+  // is why the manual steps are the default and the button is the exception.
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    el('installGo').classList.remove('hide');
+    el('installTitle').textContent = 'Install this app';
+    el('installSteps').classList.add('hide');
+  });
+
+  el('installGo').onclick = function () {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function () {
+      deferredPrompt = null;
+      hideInstall();
+    });
+  };
+
+  function hideInstall() { el('install').classList.add('hide'); }
+
+  el('installLater').onclick = function () {
+    hideInstall();
+    // Remember the dismissal for a week — but showInstall(true) ignores this,
+    // so tapping "Enable notifications" always brings it back.
+    try {
+      localStorage.setItem('vault-install-dismissed', String(Date.now()));
+    } catch (e) { /* private mode — just don't remember */ }
+  };
+
+  function dismissedRecently() {
+    try {
+      var at = Number(localStorage.getItem('vault-install-dismissed') || 0);
+      return at && Date.now() - at < 7 * 24 * 60 * 60 * 1000;
+    } catch (e) { return false; }
+  }
+
+  function showInstall(force) {
+    if (standalone) return false;
+    if (!force && dismissedRecently()) return false;
+    if (!isIOS && !deferredPrompt) {
+      // A desktop browser with no install path — the steps would be wrong.
+      if (!force) return false;
+      el('installTitle').textContent = 'Open this on your phone';
+      el('installWhy').textContent =
+        'Notifications go to a phone. Open this same link on your phone and add it to the home screen there.';
+      el('installSteps').classList.add('hide');
+    }
+    el('install').classList.remove('hide');
+    return true;
+  }
+
+  el('notify').onclick = function () {
+    var s = el('notifyStatus');
+    // iOS silently refuses push outside an installed app, and the permission
+    // prompt never appears — so ask for the install instead of failing blank.
+    if (!standalone && isIOS) {
+      showInstall(true);
+      return say(s, 'Add it to your home screen first, then open it from there.', 'bad');
+    }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return say(s, 'This browser cannot do push notifications.', 'bad');
+    }
+    if (!cfg.vapidPublicKey) {
+      return say(s, 'The server has no VAPID keys set. Ask Claude to finish the notification setup.', 'bad');
+    }
+    say(s, 'Asking permission…');
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error('Permission denied. Enable it in Settings → Notifications.');
+      return navigator.serviceWorker.register('/app-sw.js', { scope: '/' });
+    }).then(function () {
+      return navigator.serviceWorker.ready;
+    }).then(function (reg) {
+      return reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(cfg.vapidPublicKey)
+      });
+    }).then(function (sub) {
+      return api('/app/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+    }).then(function (r) {
+      say(s, 'Done — ' + r.devices + ' device(s) registered.', 'ok');
+      return api('/app/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: cfg.title, body: 'Notifications are on.' })
+      });
+    }).catch(function (e) { say(s, e.message, 'bad'); });
+  };
+
+  // ── boot ──
+  function boot() {
+    return api('/app/config').then(function (c) {
+      cfg = c;
+      localStorage.setItem(KEY, token);
+      renderApp();
+    });
+  }
+
+  el('connect').onclick = function () {
+    token = el('token').value.trim();
+    if (!token) return say(el('gateStatus'), 'Paste the token first.', 'bad');
+    say(el('gateStatus'), 'Checking…');
+    boot().catch(function (e) {
+      say(el('gateStatus'), e.message === 'unauthorized' ? "That token didn't work." : e.message, 'bad');
+    });
+  };
+  el('token').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') el('connect').click();
+  });
+
+  if (token) {
+    boot().catch(function () {
+      // Stored token went stale (rotated APP_TOKEN) — fall back to the gate.
+      localStorage.removeItem(KEY);
+      token = '';
+    });
+  }
+})();
+</script>
+</body>
+</html>

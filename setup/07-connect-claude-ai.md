@@ -19,8 +19,15 @@ does the clicks in the app (you can't touch their claude.ai account).
    - Save.
 
 3. `[You'll do this]` It'll send them to a **sign-in page** — a simple page
-   with a single "Passphrase" box. Give them the passphrase you saved from
-   chunk 06 and have them paste it and click **Authorize**.
+   with a single "Passphrase" box. Give them the passphrase from chunk 06 and
+   have them paste it and click **Authorize**.
+
+   **If you don't have it** — a resumed session, or it scrolled out of context
+   — do NOT ask them for it. They never had it; the setup script generated it.
+   `[I'll do this]` read it straight off the server:
+   ```
+   ssh root@<IP> 'grep AUTH_PASSWORD ~/kb-vault/.env'
+   ```
    - One-sentence explanation: "That login is what keeps your notes private —
      strangers hitting that URL get nothing without the passphrase. You only
      enter it once and then it remembers."

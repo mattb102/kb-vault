@@ -61,6 +61,11 @@ anything that gets committed.
 - Hetzner asks for ID verification: normal for new accounts, may take a bit to
   approve. If they're blocked, do the local install (chunk 03) in the meantime
   and come back to the VPS chunks (04–07) when Hetzner clears them.
+  **Write the reason into `setup/.progress.md` under Notes** — e.g. "blocked on
+  Hetzner ID verification, submitted 5 Mar; resume at chunk 04 once approved."
+  A later session (possibly days later) reads that file to pick up, and without
+  the *why* it can only manage a vague "how's that going?", which reads as
+  nonsense to someone who never really understood what they were waiting for.
 
 ## NEXT
 

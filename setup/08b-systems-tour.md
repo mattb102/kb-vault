@@ -260,4 +260,4 @@ Then tell them:
 
 ## NEXT
 
-Tick `08b`, then read `setup/09-verify-everything.md`.
+Tick `08b`, then read `setup/08c-phone-app.md`.

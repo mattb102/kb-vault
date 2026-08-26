@@ -90,6 +90,23 @@ little, this is the biggest step.
 
 ## NEXT
 
-Tick `03`. If their Hetzner account is ready, read `setup/04-provision-vps.md`.
-If not, no rush — the local vault already works on its own. They can stop here
-and resume the VPS/phone half whenever.
+Tick `03`.
+
+The next chunk needs their Hetzner account to be live, and **only they can tell
+you whether it is** — so ask properly rather than lobbing a status ping at them
+(see rule 8 in `00-START-HERE.md`; a bare "how's Hetzner coming along?" is a
+real thing that really confused someone). Re-establish what it is and what
+you're asking for:
+
+> "Next up is the server — the always-on computer that makes this work on your
+> phone. That's the Hetzner account you made earlier. They occasionally hold new
+> accounts for an ID check, so before we start: can you open
+> **hetzner.com/cloud** and tell me whether it lets you straight into the
+> console, or whether it's still asking you to verify something?"
+
+- **They're in** → read `setup/04-provision-vps.md` and keep going.
+- **Still pending, or they'd rather stop** → this is a completely fine place to
+  stop, and say so: what's on their laptop already works on its own and nothing
+  is half-finished. Note it in `setup/.progress.md` under Notes — *what* they're
+  waiting on and *what they'll do when it clears* — so whoever picks this up
+  next can re-orient them instead of asking them to remember.

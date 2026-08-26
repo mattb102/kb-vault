@@ -10,14 +10,25 @@ needs read access.
 
 ## STEPS
 
-1. `[I'll do this]` Get the code and their private vault onto the VPS. Over SSH:
-   - Clone this repo to `~/kb-vault` on the VPS.
-   - The vault repo is **private**, so the VPS needs read access. Easiest path:
-     clone using an HTTPS URL with a GitHub token — either a fine-grained PAT
-     scoped to just the vault repo, or a deploy key. If they need a token:
-     `[You'll do this]` — walk them through GitHub → Settings → Developer
-     settings → Personal access tokens → fine-grained → select only the vault
-     repo → read/write contents. Keep the token out of any committed file.
+1. `[I'll do this]` Clone this repo to `~/kb-vault` on the VPS over SSH.
+
+1b. `[You'll do this]` — **this is a real stop, not an aside.** Their notes repo
+   is private, so the server needs its own permission to read it. Don't say
+   "I need a PAT"; say what it is and why, then give the click-path and wait:
+
+   > "One thing only you can do. Your notes live in a private GitHub repo, and
+   > the server needs permission to read it — right now it's locked out, which
+   > is what we want by default. GitHub calls that permission a 'token'. It
+   > takes about a minute:
+   > **github.com → your avatar (top right) → Settings → Developer settings →
+   > Personal access tokens → Fine-grained tokens → Generate new token.**
+   > Give it any name, under *Repository access* pick **Only select
+   > repositories** and choose your vault repo, then under *Permissions →
+   > Repository permissions* set **Contents** to **Read and write**. Generate
+   > it, then paste me the token — it starts with `github_pat_`."
+
+   **STOP and wait.** Keep the token out of every committed file and out of
+   `setup/.progress.md`; use it for the clone URL and nothing else.
 
 2. `[I'll do this]` Run the VPS bootstrap over SSH. Search runs on a local
    model, so no key needed:
@@ -37,7 +48,14 @@ needs read access.
 
 3. `[I'll do this]` **Grab the passphrase** the script prints at the end
    (`AUTH_PASSWORD`). You'll hand it to them in the next chunk so they can log
-   in from the claude.ai app. Don't write it into any committed file.
+   in from the claude.ai app. Don't write it into any committed file, and don't
+   put it in `setup/.progress.md` either — it's a password.
+
+   That means it lives only in this conversation, so **if the session ends
+   between here and chunk 07 it is gone from your context.** That's fine and
+   expected: it is always recoverable from the server itself with
+   `ssh root@<IP> 'grep AUTH_PASSWORD ~/kb-vault/.env'`. Read it back from
+   there rather than asking them for a password they were never given.
 
 ## VERIFY
 

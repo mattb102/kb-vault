@@ -10,7 +10,7 @@ import {
 } from "./scratchpad.js";
 import { today } from "./utils.js";
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-4-8";
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5";
 
 const CLUSTER_WINDOW_DAYS = 30;
 const MIN_CLUSTER_SIZE = 3;

@@ -16,6 +16,50 @@ and just help with whatever they ask.
 
 ---
 
+# Check for updates
+
+A session-start hook (`.claude/hooks/session-start.sh`) checks whether this copy
+of the vault software is behind the version it was installed from, and prints
+one of two lines into your context:
+
+- `[vault] Software is up to date.` — say nothing about it. Don't mention that
+  you checked.
+- `[vault] UPDATE AVAILABLE: this copy is N commit(s) behind …` — mention it
+  **once**, early, in plain language, and offer to do it. They are not going to
+  run `git pull` on their own; nobody has ever told them it exists.
+
+Something like:
+
+> "Quick heads up before we get into it — there's a newer version of the vault
+> software available (looks like it adds X). Takes about a minute and I can do
+> it now, or we can leave it. Your notes aren't affected either way."
+
+The last sentence matters: **their notes live in a different repo from this
+code.** Updating the software cannot touch what they've written, and saying so
+removes the only reason they'd hesitate.
+
+If they say yes, `[I'll do this]`:
+
+```
+git pull --ff-only
+npm install
+npm run build
+```
+
+Then, **if they have the VPS half set up, the server needs the same treatment**
+— it's a separate copy of this repo on a different machine, and updating their
+laptop does nothing for their phone. Over SSH: same three commands in
+`~/kb-vault`, then `sudo systemctl restart vault`.
+
+Rules:
+- **Never pull without asking**, and never over uncommitted changes — if the
+  hook reported local changes, show them what's modified and let them decide.
+- If `git pull --ff-only` refuses, don't force it. Explain that their copy has
+  diverged and offer to look at what's different.
+- If they decline, drop it. Don't bring it up again this session.
+
+---
+
 # This repo: a personal vault (MCP server) the owner runs themselves
 
 This is a self-hosted knowledge vault: a folder of markdown notes plus an MCP
@@ -45,6 +89,13 @@ something works, teach it — but never force it.
   the patterns matter for consistency and for future Claude sessions being able
   to route correctly.
 - **Deploying a code change to their VPS** → `recipes/03-deploy-a-change.md`.
+- **Anything about their phone** — "log this from my phone", "can it notify
+  me", "add a button for X", "notifications aren't working" → the `ios_app`
+  plugin. `setup/08c-phone-app.md` has the setup and the troubleshooting. The
+  single most common problem is that they never added it to their home screen,
+  which on iOS means notifications can never be delivered — check that first.
+- **Anything about the daily briefing** — "my morning report", "it didn't run",
+  "make it blunter" → the `morning_report` plugin, `setup/08d-morning-report.md`.
 
 ## How the code is laid out
 
@@ -64,6 +115,13 @@ something works, teach it — but never force it.
 
 - Search runs on a **local** embedding model by default — no API key. OpenAI is
   opt-in (`EMBEDDING_PROVIDER=openai`).
+- **Don't raise `MAX_CHUNK_CHARS` in `src/core/chunker.ts`, and don't remove the
+  `flock` in `scripts/cron-reindex.sh`.** Both exist because the local embedder
+  will OOM a 4GB box: one giant markdown table chunked whole, or two reindexes
+  running at once, will take the whole server down until someone notices.
+- The phone app's `APP_TOKEN` is deliberately a **different secret** from
+  `API_KEY`. Never "simplify" them into one — the phone holds a token that can
+  log trackers and nothing else.
 - Never echo or commit secrets. `.env` is gitignored; keep it that way.
 - Their notes are personal. Treat vault contents as private; don't paste them
   anywhere external.

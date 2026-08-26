@@ -33,4 +33,43 @@ embeddingProvider: local
 #   mal       - reference: MyAnimeList anime/manga tracking
 #   espn      - reference: ESPN fantasy baseball (read-only API)
 #   claude_code - powerful: delegate coding tasks to Claude Code on the VPS
+#   ios_app     - phone home-screen app: tap-to-log trackers + push notifications
+#   morning_report - a daily briefing the vault writes about you
 enabledPlugins: []
+
+# Per-plugin settings. Only the plugins you enable above read their section.
+plugins:
+  # The phone app. Install it by opening https://<your-domain>/app on your
+  # phone and adding it to the home screen — on iPhone that step is what makes
+  # notifications possible at all.
+  #
+  # Each tracker is one tap-to-log button set backed by one note in your vault.
+  #   kind: scale  -> one button per step from min to max (max 21 buttons)
+  #   kind: yesno  -> a Yes/No pair, stored as 1/0
+  #   kind: number -> a free numeric field (use `unit` for the placeholder)
+  ios_app:
+    title: "My Vault"
+    trackers: []
+    #  - id: mood
+    #    label: "Mood"
+    #    prompt: "How's today going?"
+    #    kind: scale
+    #    min: 1
+    #    max: 10
+    #    note: Health/metrics/mood.md
+    #  - id: sleep
+    #    label: "Sleep"
+    #    kind: number
+    #    unit: hrs
+    #    note: Health/metrics/sleep.md
+
+  # The daily briefing. Always written to Reports/<date>-morning.md in your
+  # vault; `delivery` adds channels on top of that.
+  #   push    -> a notification to the phone app (needs the ios_app plugin)
+  #   discord -> posted to DISCORD_WEBHOOK_URL
+  morning_report:
+    delivery: []
+    # audio: true                 # read it aloud as an mp3 (Discord; needs OPENAI_API_KEY)
+    # tone: "blunt, no pep talk"
+    # location: "Boston"          # omit to skip the weather line
+    # trackers: [mood, sleep]     # tracker ids to summarize
