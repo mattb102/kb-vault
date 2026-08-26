@@ -36,7 +36,12 @@ setup and the connection test are `[I'll do this]`.
 
 3. `[You'll do this]` "Once it's built — should only take a few seconds —
    copy the server's **IPv4 address** (looks like `1.2.3.4`) and paste it to
-   me." Wait. Save the IP.
+   me." Wait.
+
+   `[I'll do this]` **Write the IP into `setup/.progress.md` under Notes
+   immediately.** Every remaining chunk needs it, and if this session ends
+   before then, asking them to "paste the IP again" means sending someone back
+   into a hosting console to hunt for a number they don't recognise.
 
 ## VERIFY
 

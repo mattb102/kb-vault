@@ -4,6 +4,19 @@
 server needs this to get an HTTPS certificate and be reachable by name instead
 of a raw IP.
 
+**IF YOU DON'T HAVE THE DOMAIN OR TOKEN IN FRONT OF YOU** (a resumed session,
+usually): the domain should be in `setup/.progress.md` under Notes — put it
+there now if it isn't. The **token is a secret and must never be written into
+that file**, so you will have to ask for it again, and asking for a "DuckDNS
+token" cold is exactly the context-free question rule 8 in `00-START-HERE.md`
+warns about. Ask like this instead:
+
+> "I need one thing from you — back at the start you signed up for DuckDNS,
+> the free service that gives your server a web address. Go to **duckdns.org**,
+> sign in, and copy the **token** shown near the top of the page. It's a long
+> string of letters and numbers. I don't save it anywhere, I just need it for
+> this one step."
+
 **WHO DOES WHAT:** The DuckDNS update is `[You'll do this]` (or you can do it
 via their token); the verification is `[I'll do this]`.
 

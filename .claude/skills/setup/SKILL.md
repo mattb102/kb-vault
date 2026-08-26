@@ -36,8 +36,16 @@ left off. Then open with something like:
 
 Read the chunk they were on, give them a quick one-liner recap of what's done
 and what's next, then **jump straight into that chunk** — no menu, no asking,
-no starting over. Act like the session never ended. Only show the menu if they
-explicitly say they want to do something different.
+no starting over. Only show the menu if they explicitly say they want to do
+something different.
+
+Pick up the *thread* like the session never ended — but not their *memory*. It
+may have been weeks, and they were never as oriented as you were. In particular,
+if the Notes say they were **waiting on something external** (an account
+approval, a verification email), do not open with a bare status question about
+it. Say what it was, why it mattered, and what to check — rule 8 in
+`setup/00-START-HERE.md` has the exact shape, and a real friend really did get
+asked "how's Hetzner coming along?" and had no idea what was being asked.
 
 If `.progress.md` exists but **all chunks are checked**, they're done. Tell
 them, offer to add features (`recipes/`), or help debug something.

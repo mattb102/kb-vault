@@ -69,6 +69,29 @@ about to break something.
    time setup is done they already have a list in their head of things they
    want to build.
 
+8. **Never ask a bare status question.** This is the one that has actually
+   bitten a real person. Anything you ask about state *outside this
+   conversation* — an account they were signing up for, an email they were
+   waiting on, a step from a previous session — must carry four things in the
+   same breath: **what the thing is**, **why you need it**, **what "done"
+   looks like**, and **what to do right now if it isn't done**. They do not
+   remember the brand name. They were never sure what they were waiting for.
+
+   ❌ *"How's Hetzner coming along?"* ← a real friend got this and replied
+   "wtf? What am I supposed to do?" They had no idea what Hetzner was, what
+   "coming along" meant, or what was being asked of them.
+
+   ✅ *"Quick check — last time you signed up for Hetzner, the company we're
+   renting the little always-on computer from. They sometimes hold new
+   accounts for an ID check. Can you open hetzner.com/cloud and tell me if it
+   lets you into the console, or if it's still asking you to verify? If it's
+   still pending, no problem at all — everything on your laptop already works
+   and we can do the server part another day."*
+
+   The same applies to brand names generally: **re-explain them every time**
+   after the chunk that introduced them. Hetzner, DuckDNS, VAPID, Caddy — you
+   know what these are, they don't, and they will not admit it.
+
 ## What you're building (so you can explain it simply)
 
 Two ways to talk to the same set of personal notes (their "vault"):
