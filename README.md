@@ -40,6 +40,8 @@ When you're done you'll have:
 - the vault in **Claude Code** on your computer (and browsable in **Obsidian**)
 - the same vault on **claude.ai / your phone**, served from a ~€4/month box
 - your notes synced privately through a **private GitHub repo**
+- optionally, **an app on your phone's home screen** for one-tap tracking and
+  notifications, and **a morning report** the vault writes about you daily
 
 ## What's in here
 
@@ -49,9 +51,28 @@ When you're done you'll have:
 | `recipes/` | How to ask Claude to build you new features after setup. |
 | `src/core/` | The MCP server engine: indexing, search, write-back, observations, git sync. |
 | `src/tools/` | The always-on core tools (read / write / observe). |
-| `src/plugins/` | Opt-in features (running, calendar, and more). Off by default. |
+| `src/plugins/` | Opt-in features (phone app, morning report, running, calendar, …). Off by default. |
 | `config/` | `config.example.yaml`, the starter `vault-template/`, and `CLAUDE.md.template`. |
 | `scripts/` | `bootstrap-local.sh` and `bootstrap-vps.sh` — the install automation. |
+
+## On your phone
+
+Two optional pieces turn this from a notebook into something that reaches you:
+
+- **The app** (`ios_app`) — a real icon on your home screen. Tap a number to
+  log your mood, sleep, whether you did the thing; it writes straight into your
+  vault as plain markdown. It can also send you notifications. It's a web app
+  you install via *Add to Home Screen* rather than an App Store download — and
+  on iPhone that step is what makes notifications possible at all.
+- **The morning report** (`morning_report`) — every morning the vault reads
+  your notes, your open nudges, what it's noticed about you lately and whatever
+  you've been tracking, and writes you a short, specific briefing. Saved to
+  your vault, and optionally pushed to your phone or posted to Discord —
+  including read aloud, if you want a two-minute podcast about your own life
+  with your coffee.
+
+Both are set up during `/setup` (chunks `08c` and `08d`), and both are off
+until you turn them on.
 
 ## Adding features later
 
@@ -63,9 +84,12 @@ most trackers need no code at all.
 
 - **Vault** location, owner name, transport, and enabled plugins live in
   `config/config.yaml` (copied from the example during setup).
-- **Secrets** (`API_KEY` / `AUTH_PASSWORD` on the server; `OPENAI_API_KEY` only
-  if you opt into hosted embeddings) live in `.env`, written by the bootstrap
-  scripts — never committed.
+- **Secrets** live in `.env`, written by the bootstrap scripts — never
+  committed. `API_KEY` / `AUTH_PASSWORD` gate the server; `APP_TOKEN` and the
+  `VAPID_*` pair are the phone app's own (deliberately separate — a phone that
+  can log trackers still can't read your journal); `ANTHROPIC_API_KEY` powers
+  pattern synthesis and the morning report; `OPENAI_API_KEY` only if you opt
+  into hosted embeddings or spoken reports.
 - **Embeddings** default to a **local** ONNX model (`nomic-embed-text-v1.5`) —
   no API key, no account, no cost; wants a 4 GB x86 box (the cheapest Hetzner
   CX22 is fine). Prefer a hosted API? Set `embeddingProvider: openai` + an

@@ -72,7 +72,9 @@ Route on their pick:
 - **New install / Local only** → read `setup/00-START-HERE.md` to load your
   full rules of engagement, then start the chain at `setup/01-your-computer.md`.
   For **Local only**, stop after chunk `03` — the local vault works on its own;
-  the VPS/phone chunks (`04`–`07`) are optional and can come later.
+  the VPS/phone chunks (`04`–`07`) are optional and can come later. Chunks
+  `08c` (phone app) and `08d` (morning report) also need the server, so skip
+  them on a local-only install and tell them they're there when they want them.
 - **Add a feature** → read `recipes/00-how-to-add-a-feature.md` and help them
   build it.
 - **Something's broken** → ask what's up, then check `setup/.progress.md` if
@@ -102,6 +104,8 @@ with a markdown checklist. Format:
 - [ ] 07 · Connect claude.ai
 - [ ] 08 · Personalize
 - [ ] 08b · Systems tour
+- [ ] 08c · Phone app
+- [ ] 08d · Morning report
 - [ ] 09 · Verify everything
 ```
 
@@ -117,6 +121,8 @@ session cleanly even weeks later:
 - DuckDNS domain: yourname-vault.duckdns.org
 - VPS IP: 1.2.3.4
 - Plugins wanted: running, calendar
+- Trackers on the phone app: mood (1-10), sleep (hours)
+- Morning report: push + discord, 6am, blunt tone
 ```
 
 Never commit this file — it may contain config details. It's already covered

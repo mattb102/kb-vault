@@ -230,6 +230,8 @@ multi-select):
 - **mal** — track anime and manga you're watching/reading
 - **espn** — fantasy sports
 - **claude_code** — run Claude Code tasks from inside a vault session (needs the Claude CLI installed on the VPS and subscription auth configured)
+- **ios_app** — an app on their phone's home screen for one-tap logging and notifications (set up properly in chunk `08c`)
+- **morning_report** — a daily briefing the vault writes about them (set up properly in chunk `08d`)
 
 `[I'll do this]` Set `enabledPlugins` in `config/config.yaml` to what they
 want. Plugins they don't enable stay on disk but don't run — they can add
@@ -238,6 +240,9 @@ them later just by editing the list and restarting.
 - If they pick **calendar**: needs Google Cloud OAuth credentials. Walk the
   optional Google steps from chunk 02 now, set the `GOOGLE_*` env vars, and
   have them visit `https://<domain>/calendar/auth` once to link their account.
+- If they pick **ios_app** or **morning_report**: just note it here and move
+  on. Those two have their own chunks (`08c`, `08d`) with the tokens, trackers
+  and phone steps — don't try to configure them now.
 
 ---
 

@@ -16,6 +16,15 @@ What are they asking for?
 │        → IT'S A TRACKER. Almost always ZERO code.
 │        → recipes/01-add-a-tracker.md
 │
+├─ "…and I want to log it from my phone in one tap"
+│     same as above, plus a button on their home screen
+│        → STILL ZERO CODE. Add it to plugins.ios_app.trackers in
+│          config/config.yaml, pointed at the same note. Restart.
+│        → setup/08c-phone-app.md
+│
+├─ "Notify me / remind me on my phone"
+│        → send_phone_notification (ios_app plugin). No code.
+│
 ├─ "Remember a new kind of note"
 │     recipes, trip plans, people, movies I want to watch, ideas…
 │        → NEW NOTE TYPE. No code — just frontmatter + one routing line.

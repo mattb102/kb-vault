@@ -70,3 +70,34 @@ rather than building it from scratch.
 ## Verify
 
 `log_metric` returns "Logged …", and reading the file shows the new row.
+
+---
+
+## Making it one-tap on their phone
+
+If the `ios_app` plugin is enabled, any tracker can also be a button on their
+home screen — and a tracker they can hit in one second is a tracker they'll
+still be using in three months.
+
+It's config, not code. Add an entry under `plugins.ios_app.trackers` in
+`config/config.yaml` pointing `note:` at the **same file** the tracker already
+uses:
+
+```yaml
+plugins:
+  ios_app:
+    trackers:
+      - id: workouts
+        label: "Workout"
+        prompt: "Did you train today?"
+        kind: yesno          # or: scale (with min/max), number (with unit)
+        note: Health/metrics/workouts.md
+```
+
+Rebuild and restart, and the button is there next time they open the app. The
+table format is `| Date | Value | Notes |`, one row per day; logging the same
+day again updates that row rather than adding a second one. If the note doesn't
+exist yet, it gets created with the right frontmatter on first log.
+
+See `setup/08c-phone-app.md` for the full setup, including why "Add to Home
+Screen" is mandatory rather than cosmetic.

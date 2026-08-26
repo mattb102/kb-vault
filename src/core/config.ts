@@ -22,6 +22,12 @@ interface FileConfig {
   embeddingProvider?: "openai" | "local";
   embeddingModel?: string;
   enabledPlugins?: string[];
+  /**
+   * Per-plugin settings, keyed by plugin directory name. Opaque to the core —
+   * each plugin validates its own slice. Lets a plugin take real configuration
+   * (trackers, delivery channels) without every option becoming a core field.
+   */
+  plugins?: Record<string, any>;
 }
 
 function loadFileConfig(): FileConfig {
@@ -83,6 +89,9 @@ export const config = {
           .map((s) => s.trim())
           .filter(Boolean)
       : file.enabledPlugins) || [],
+
+  // Settings for individual plugins, keyed by plugin name. See config.example.yaml.
+  pluginConfig: (file.plugins || {}) as Record<string, any>,
 
   chunkSize: 800, // target tokens per chunk
   chunkOverlap: 100,

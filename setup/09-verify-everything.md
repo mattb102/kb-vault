@@ -29,13 +29,35 @@ Run these as a checklist, narrating results plainly to them:
 5. **Phone read works** — `[You'll do this]` in the claude.ai app, ask it
    something about themselves; it answers from the vault.
 
-Tick each in `setup/.progress.md` as it passes. When all five are green, mark
+6. **Reindexing is scheduled** — `crontab -l` on the VPS shows a
+   `cron-reindex` line. Without it their search index quietly goes stale and
+   notes written from the phone become unfindable. This one has no symptom
+   until it matters, so check it rather than assume it.
+
+7. **Swap exists** — `swapon --show` on the VPS returns a row. On a 4GB box the
+   embedder can spike past free memory during a reindex; swap is the difference
+   between "slow for a minute" and "the box killed the process". Also a silent
+   failure, also worth actually looking at.
+
+**Only if they set up the phone app (08c):**
+
+8. **The app is installed and subscribed** — `ios_app_info` reports at least
+   1 device, and `send_phone_notification` visibly buzzes their phone while
+   they're holding it.
+
+**Only if they set up the morning report (08d):**
+
+9. **The report runs** — `morning_report_status` shows no MISSING keys, and
+   `crontab -l` shows the two `cron-morning-report` lines.
+
+Tick each in `setup/.progress.md` as it passes. When they're all green, mark
 the whole setup **complete**.
 
 ## VERIFY
 
-All five checks green. If the sync check lags a bit, give it a moment or
-trigger a read (which pulls first). Both surfaces should converge fast.
+Every check that applies to them is green. If the sync check lags a bit, give
+it a moment or trigger a read (which pulls first). Both surfaces should
+converge fast.
 
 ## TROUBLESHOOTING
 
@@ -43,7 +65,12 @@ trigger a read (which pulls first). Both surfaces should converge fast.
   push/pull. Check that the vault on both sides has the GitHub remote set and
   that pushes are succeeding (`git log --oneline -5` in the vault dir).
 - Anything red: walk it back to the chunk that owns that piece (search → 03/06,
-  sync → GitHub remote, phone → 07).
+  sync → GitHub remote, phone → 07, app → 08c, report → 08d).
+- No reindex cron: re-run `bash scripts/bootstrap-vps.sh` (it's idempotent), or
+  add the line by hand — `*/10 * * * * bash ~/kb-vault/scripts/cron-reindex.sh`.
+- No swap: `sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile &&
+  sudo mkswap /swapfile && sudo swapon /swapfile`, then add
+  `/swapfile none swap sw 0 0` to `/etc/fstab` so it survives a reboot.
 
 ## You're done — give them the tour
 
@@ -86,6 +113,20 @@ capability at a time, maybe show it live.
   after Sunday's pattern synthesis). You can also call it manually — useful after
   a big life change or after your first month of observations have accumulated.
   Requires `ANTHROPIC_API_KEY`.
+
+**Your phone** (if they set up `ios_app` in 08c)
+- The icon on your home screen logs straight into the vault — one tap, no
+  typing, no opening an app and finding the right screen. That's the whole
+  point: the tracking you'll actually keep doing is the tracking that takes
+  one second.
+- I can also send you notifications. Nudges, reminders, your morning report.
+
+**Morning report** (if they set up `morning_report` in 08d)
+- Every morning I read your vault and write you a briefing — what matters
+  today, what's slipping, one thing worth your attention. It's saved to
+  `Reports/` so you can look back at what I was telling you a month ago, which
+  turns out to be the interesting part.
+- Ask me for one any time with `morning_report`, not just at 6am.
 
 **Weekly summary**
 - Ask me "write my weekly summary" any time (Sunday evenings work well). I'll
