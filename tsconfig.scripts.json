@@ -1,0 +1,19 @@
+{
+  // Typecheck-only pass covering BOTH src/ and scripts/.
+  //
+  // The main tsconfig deliberately excludes scripts/ — those files are never
+  // compiled, they run straight from source under tsx (cron jobs, one-off CLI
+  // tasks). The side effect was that nothing typechecked them: you could edit
+  // src/, break an interface a cron script depends on, build clean, deploy
+  // clean, and find out at 6am when the morning report failed silently into a
+  // log file nobody reads.
+  //
+  // `npm run build` runs this first (via prebuild), so that can't happen.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "build"]
+}

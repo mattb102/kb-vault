@@ -135,6 +135,12 @@ something works, teach it — but never force it.
 - The phone app's `APP_TOKEN` is deliberately a **different secret** from
   `API_KEY`. Never "simplify" them into one — the phone holds a token that can
   log trackers and nothing else.
+- **`scripts/` is not compiled** — those files run from source under `tsx`, so
+  the main `tsconfig.json` excludes them. `npm run typecheck` (and `build`, via
+  `prebuild`) uses `tsconfig.scripts.json` to cover `src/` *and* `scripts/`
+  together. Keep it that way: without it, a change in `src/` can break a cron
+  entry point with nothing failing until that job's next scheduled run, into a
+  log file nobody is reading.
 - Never echo or commit secrets. `.env` is gitignored; keep it that way.
 - Their notes are personal. Treat vault contents as private; don't paste them
   anywhere external.

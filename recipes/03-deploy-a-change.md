@@ -16,7 +16,7 @@ git fetch origin
 git reset --hard origin/<branch>   # match the repo exactly — no merge surprises
 
 npm install                        # only if package.json changed
-npm run build                      # required — compiles src/ -> build/
+npm run build                      # required — typechecks everything, then compiles src/ -> build/
 
 sudo systemctl restart vault
 sleep 2
@@ -32,10 +32,18 @@ curl -fsS https://<domain>/health  # expect: {"status":"ok", ...}
 - **`npm run build` before restart**: the #1 silent failure. Skip it and the
   server keeps running the old compiled binary — the change appears to "not
   work" with zero error output.
+- **`build` typechecks `scripts/` too**, via a `prebuild` step that runs
+  `tsconfig.scripts.json`. This matters more than it sounds: the cron scripts
+  are never compiled — they run from source under `tsx` — so for a long time
+  nothing typechecked them at all. You could rename something in `src/`, build
+  clean, deploy clean, and discover at 6am that the morning report had been
+  throwing into a log file nobody reads. Run `npm run typecheck` on its own
+  while you're working; `build` runs it for you before shipping.
 - **Check `is-active` + `/health`**: a bad change can crash the service on
   start. If it's not active, read the logs:
   `journalctl -u vault --no-pager | tail -30` — usually a missing env var or
-  a TypeScript error that slipped through.
+  a TypeScript error that slipped through (much less likely now that `build`
+  covers `scripts/` as well).
 
 ## After a restart: reconnect the phone
 

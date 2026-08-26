@@ -5,6 +5,8 @@
   "type": "module",
   "main": "build/index.js",
   "scripts": {
+    "typecheck": "tsc -p tsconfig.scripts.json",
+    "prebuild": "npm run typecheck",
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsx src/index.ts",
