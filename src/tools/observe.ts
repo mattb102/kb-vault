@@ -86,16 +86,24 @@ export function register(server: McpServer): void {
         .describe(
           "Priority: P0=urgent/blocker, P1=high-value time-sensitive, P2=should do soon (default), P3=nice to have"
         ),
+      due: z
+        .string()
+        .optional()
+        .describe(
+          "Optional due date or recurrence token. Accepted values: YYYY-MM-DD (a specific date), " +
+          "'daily', 'weekdays', or a weekday name ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'). " +
+          "Omit for open-ended intentions with no specific deadline."
+        ),
     },
-    async ({ goal, last_mentioned, note, priority }) => {
-      const result = await logNudge(goal, last_mentioned, note, priority);
+    async ({ goal, last_mentioned, note, priority, due }) => {
+      const result = await logNudge(goal, last_mentioned, note, priority, due);
       return { content: [{ type: "text", text: result }] };
     }
   );
 
   server.tool(
     "clear_nudge",
-    "Set a nudge's status: addressed (followed through), wont_do (decided against it), or in_progress (actively being worked on — not done, but no longer untouched/open).",
+    "Set a nudge's status: addressed (followed through), wont_do (decided against it), expired (aged out unactioned), or in_progress (actively being worked on). Terminal statuses move the row to the nudges archive.",
     {
       goal: z.string().describe("The goal whose status to set"),
       resolution: z
@@ -105,10 +113,10 @@ export function register(server: McpServer): void {
           "Optional note — how it was resolved when closing, or a short progress note when marking in_progress."
         ),
       status: z
-        .enum(["addressed", "wont_do", "in_progress"])
+        .enum(["addressed", "wont_do", "in_progress", "expired"])
         .optional()
         .describe(
-          "addressed (did it), wont_do (explicitly decided not to), or in_progress (actively cooking). Defaults to addressed."
+          "addressed (did it), wont_do (explicitly decided not to), expired (abandoned/lapsed), or in_progress (actively cooking). Defaults to addressed."
         ),
     },
     async ({ goal, resolution, status }) => {

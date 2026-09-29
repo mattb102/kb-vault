@@ -233,8 +233,15 @@ export function register(server: McpServer): void {
         .describe(
           "Scratchpad only: keep entries whose text contains this substring (case-insensitive)."
         ),
+      include_archive: z
+        .boolean()
+        .optional()
+        .describe(
+          "Scratchpad only: also search the monthly archive files created by the scratchpad-decay script. " +
+          "Useful for finding observations older than the live rolling window. Results are sorted chronologically."
+        ),
     },
-    async ({ topic, days, maxEntries, type, subject, search }) => {
+    async ({ topic, days, maxEntries, type, subject, search, include_archive }) => {
       await gitPull();
       const content = await getObservations(
         topic,
@@ -242,7 +249,8 @@ export function register(server: McpServer): void {
         maxEntries,
         type,
         subject,
-        search
+        search,
+        include_archive,
       );
       return { content: [{ type: "text", text: content }] };
     }

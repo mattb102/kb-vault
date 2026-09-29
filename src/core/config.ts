@@ -13,6 +13,13 @@ import { parse as parseYaml } from "yaml";
  * person-specific value comes from config.yaml or the environment.
  */
 
+interface DecayConfig {
+  /** Days a P2/P3 nudge must be untouched before the decay script expires it (default: 60). */
+  nudgeDecayDays?: number;
+  /** Days before a scratchpad entry is moved to the monthly archive (default: 120). */
+  scratchpadDecayDays?: number;
+}
+
 interface FileConfig {
   vaultPath?: string;
   ownerName?: string;
@@ -28,6 +35,8 @@ interface FileConfig {
    * (trackers, delivery channels) without every option becoming a core field.
    */
   plugins?: Record<string, any>;
+  /** Retention / decay settings for the automated cleanup scripts. */
+  decay?: DecayConfig;
 }
 
 function loadFileConfig(): FileConfig {
@@ -92,6 +101,12 @@ export const config = {
 
   // Settings for individual plugins, keyed by plugin name. See config.example.yaml.
   pluginConfig: (file.plugins || {}) as Record<string, any>,
+
+  // Retention / decay settings for the automated cleanup scripts.
+  decay: {
+    nudgeDecayDays: file.decay?.nudgeDecayDays ?? 60,
+    scratchpadDecayDays: file.decay?.scratchpadDecayDays ?? 120,
+  },
 
   chunkSize: 800, // target tokens per chunk
   chunkOverlap: 100,

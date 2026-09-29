@@ -1,10 +1,11 @@
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, readdir } from "fs/promises";
 import { join } from "path";
 import matter from "gray-matter";
 import { config } from "./config.js";
 import { frontmatterIndex } from "./frontmatter.js";
 import { absPath, today, nowTime, currentWeek } from "./utils.js";
 import { gitCommitAndPush } from "./sync.js";
+import { isDueOn, daysOverdue } from "./due.js";
 
 /**
  * Append a raw observation to the AI scratchpad.
@@ -74,6 +75,67 @@ export async function logPattern(
   return `Pattern logged: ${pattern}`;
 }
 
+const NUDGE_ARCHIVE_REL = join("AI-Observations", "nudges-archive.md");
+
+const NUDGE_TABLE_HEADER = [
+  "| Goal | First Mentioned | Last Checked | Status | Priority | Note | Resolution | Due |",
+  "| --- | --- | --- | --- | --- | --- | --- | --- |",
+].join("\n");
+
+/** Statuses that remove a nudge from the live table. */
+const TERMINAL_NUDGE_STATUSES = new Set(["addressed", "wont_do", "expired"]);
+
+function normalizeGoal(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Find an open or in_progress nudge row whose goal matches (case-insensitive,
+ * whitespace-normalized). Returns a description string if found, null otherwise.
+ */
+export function findExistingOpenNudge(raw: string, goal: string): string | null {
+  const normalized = normalizeGoal(goal);
+  for (const line of raw.split("\n")) {
+    if (!line.trimStart().startsWith("|")) continue;
+    const cells = line.split(/(?<!\\)\|/);
+    if (cells.length < 5) continue;
+    const rowGoal = (cells[1] ?? "").replace(/\\\|/g, "|").trim();
+    const rowStatus = (cells[4] ?? "").trim().toLowerCase();
+    if (
+      (rowStatus === "open" || rowStatus === "in_progress") &&
+      normalizeGoal(rowGoal) === normalized
+    ) {
+      return `${rowGoal} (${rowStatus})`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Append rows to the nudges archive (created on first use). Terminal nudges
+ * live here so the active table — loaded into context every conversation —
+ * stays small and 100% signal. Append-only; resurrect by re-logging.
+ */
+export async function archiveNudgeRows(rows: string[]): Promise<void> {
+  if (rows.length === 0) return;
+  const path = join(config.vaultPath, NUDGE_ARCHIVE_REL);
+  let raw: string;
+  try {
+    raw = await readFile(path, "utf-8");
+  } catch {
+    raw = matter.stringify(
+      `\n# Nudges Archive\n\nTerminal nudges (addressed, wont_do, expired) moved out of the live table. Append-only.\n\n${NUDGE_TABLE_HEADER}\n`,
+      {
+        type: "ai-observation-archive",
+        topic: "nudges-archive",
+        tags: ["ai", "observations", "nudges", "archive"],
+        created: today(),
+      },
+    );
+  }
+  await writeFile(path, raw.trimEnd() + "\n" + rows.join("\n") + "\n");
+}
+
 /**
  * Add an accountability nudge.
  */
@@ -81,7 +143,8 @@ export async function logNudge(
   goal: string,
   lastMentioned: string,
   note?: string,
-  priority: "P0" | "P1" | "P2" | "P3" = "P2"
+  priority: "P0" | "P1" | "P2" | "P3" = "P2",
+  due?: string,
 ): Promise<string> {
   const entry = frontmatterIndex.findOne({
     type: "ai-observation",
@@ -93,12 +156,34 @@ export async function logNudge(
   }
 
   const raw = await readFile(entry.path, "utf-8");
+
+  const existing = findExistingOpenNudge(raw, goal);
+  if (existing) {
+    return `Nudge already exists — not added. Existing: ${existing}`;
+  }
+
   const sanitize = (s: string) =>
     s.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
-  // Column order: goal | first | last | status | priority | note | resolution
-  // Trailing empty cell keeps the table rectangular (7 columns).
-  const row = `| ${sanitize(goal)} | ${lastMentioned} | ${today()} | open | ${priority} | ${sanitize(note || "")} | |`;
-  const updated = raw.trimEnd() + "\n" + row + "\n";
+  // Column order: goal | first | last | status | priority | note | resolution | due
+  // Empty resolution cell keeps the table rectangular (8 columns); due is last.
+  const row = `| ${sanitize(goal)} | ${lastMentioned} | ${today()} | open | ${priority} | ${sanitize(note || "")} | | ${due || ""} |`;
+
+  // In-place header upgrade: if the live table has 7 columns (no Due), add it.
+  // Matches any 7-column nudge header regardless of capitalisation or spacing
+  // variants, and any corresponding separator row.
+  const upgraded = raw.replace(
+    /^(\|[ \t]*[Gg]oal[ \t]*\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|)[ \t]*$/m,
+    (match) => match.trimEnd().endsWith("Due |") ? match : match.trimEnd() + " Due |",
+  ).replace(
+    /^(\|[-| \t]+\|[-| \t]+\|[-| \t]+\|[-| \t]+\|[-| \t]+\|[-| \t]+\|[-| \t]+\|)[ \t]*$/m,
+    (match) => {
+      // Only upgrade if this is a 7-column separator (count pipes).
+      const pipes = (match.match(/\|/g) || []).length;
+      return pipes === 8 ? match.trimEnd() + " --- |" : match;
+    },
+  );
+
+  const updated = upgraded.trimEnd() + "\n" + row + "\n";
 
   await writeFile(entry.path, updated);
   await gitCommitAndPush(`AI nudge: ${goal}`);
@@ -107,15 +192,17 @@ export async function logNudge(
 }
 
 /**
- * Set a nudge's status: addressed (did it), wont_do (decided against it), or
- * in_progress (actively being worked on — not done, but no longer untouched).
- * Optionally records a note in the 7th column (a resolution when closing, or a
- * progress note when marking in_progress). Matches the first row with the goal.
+ * Set a nudge's status: addressed (did it), wont_do (decided against it),
+ * expired (aged out unactioned), or in_progress (actively being worked on).
+ * Terminal statuses (addressed, wont_do, expired) MOVE the row to
+ * nudges-archive.md; in_progress updates in place. Optionally records a note
+ * in the resolution column when closing, or a progress note for in_progress.
+ * Matches the first row with the goal.
  */
 export async function clearNudge(
   goal: string,
   resolution?: string,
-  status: "addressed" | "wont_do" | "in_progress" = "addressed",
+  status: "addressed" | "wont_do" | "in_progress" | "expired" = "addressed",
 ): Promise<string> {
   const entry = frontmatterIndex.findOne({
     type: "ai-observation",
@@ -130,43 +217,54 @@ export async function clearNudge(
   const sanitize = (s: string) =>
     s.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
 
-  // Anchor on the goal as a full cell: | <goal> | — same matching as before.
+  // Anchor on the goal as a full cell: | <goal> |
   const goalRe = new RegExp(
     `\\|\\s*${goal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\|`,
   );
 
+  const isTerminal = TERMINAL_NUDGE_STATUSES.has(status);
   const lines = raw.split("\n");
+  let matchedRow: string | null = null;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trimStart().startsWith("|") || !goalRe.test(line)) continue;
 
     // Split on UNESCAPED pipes so escaped pipes (\|) inside the goal/note
-    // cells don't shift column indices. The split brackets the row with a
-    // leading and trailing "" (text before the first / after the last pipe).
-    // Columns: ["", goal, first, last, status, priority, note, (resolution,) ""].
+    // cells don't shift column indices.
+    // Columns: ["", goal, first, last, status, priority, note, (resolution,) (due,) ""].
     const cells = line.split(/(?<!\\)\|/);
 
-    // status lives at index 4, ahead of any note pipes, so it's always safe.
     if (cells.length > 5) {
       cells[4] = ` ${status} `;
     }
 
-    if (resolution !== undefined && cells.length >= 8) {
+    if (resolution !== undefined) {
       const resCell = ` ${sanitize(resolution)} `;
+      // Resolution lives at index 7 (after goal, first, last, status, priority, note).
+      // Index 7 is safe because goal/first/last/status/priority never contain pipes.
       if (cells.length >= 9) {
-        // Row already has a 7th (resolution) cell — replace it in place.
         cells[7] = resCell;
-      } else {
-        // Legacy 6-column row — insert the resolution before the trailing "".
+      } else if (cells.length >= 8) {
         cells.splice(cells.length - 1, 0, resCell);
       }
     }
 
     lines[i] = cells.join("|");
+    matchedRow = lines[i];
+
+    if (isTerminal) {
+      lines.splice(i, 1);
+    }
     break;
   }
 
   await writeFile(entry.path, lines.join("\n"));
+
+  if (isTerminal && matchedRow) {
+    await archiveNudgeRows([matchedRow]);
+  }
+
   const action = status === "in_progress" ? "Mark nudge in-progress" : "Clear nudge";
   await gitCommitAndPush(`${action}: ${goal}`);
 
@@ -175,8 +273,72 @@ export async function clearNudge(
       ? "marked won't-do"
       : status === "in_progress"
         ? "marked in-progress"
-        : "addressed";
+        : status === "expired"
+          ? "expired"
+          : "addressed";
   return `Nudge ${verb}: ${goal}`;
+}
+
+/**
+ * Expire dated open nudges whose due date is strictly more than `daysGrace`
+ * days in the past. Recurring and undated rows are never touched — a
+ * "daily" or "weekdays" nudge represents a standing commitment, not a task.
+ * Moves expired rows to nudges-archive.md. Returns the number of rows expired.
+ *
+ * Call this at report-generation time so the live table stays clean without
+ * requiring a separate cron job for the most common case.
+ */
+export async function sweepExpiredNudges(daysGrace = 0): Promise<number> {
+  const entry = frontmatterIndex.findOne({
+    type: "ai-observation",
+    topic: "nudges",
+  });
+  if (!entry) return 0;
+
+  const iso = today();
+  const raw = await readFile(entry.path, "utf-8");
+  const lines = raw.split("\n");
+
+  const kept: string[] = [];
+  const toArchive: string[] = [];
+
+  let dataRowsSeen = 0;
+  for (const line of lines) {
+    if (!line.trimStart().startsWith("|")) {
+      kept.push(line);
+      continue;
+    }
+    dataRowsSeen++;
+    if (dataRowsSeen <= 2) {
+      kept.push(line);
+      continue;
+    }
+    const cells = line.split(/(?<!\\)\|/);
+    const status = (cells[4] || "").trim().toLowerCase();
+    // Due is the last real column (index 8 in 8-col rows, absent in legacy 7-col rows).
+    const dueRaw = cells.length >= 10 ? (cells[8] || "").trim() : "";
+
+    if (status !== "open" && status !== "in_progress") {
+      kept.push(line);
+      continue;
+    }
+
+    const over = daysOverdue(dueRaw, iso);
+    if (over !== null && over > daysGrace) {
+      // Mark as expired in-place for the archive copy.
+      const archived = [...cells];
+      archived[4] = " expired ";
+      toArchive.push(archived.join("|"));
+    } else {
+      kept.push(line);
+    }
+  }
+
+  if (toArchive.length === 0) return 0;
+
+  await writeFile(entry.path, kept.join("\n"));
+  await archiveNudgeRows(toArchive);
+  return toArchive.length;
 }
 
 /**
@@ -271,8 +433,10 @@ function sortNudgesByPriority(content: string): string {
 
 /**
  * Read AI observations for a given topic. For scratchpad, `days` filters to
- * entries from the last N days (inclusive of today), and `maxEntries` caps to
- * the most-recent N entries as a safety fallback.
+ * entries from the last N days (inclusive of today), `maxEntries` caps to the
+ * most-recent N entries as a safety fallback, and `includeArchive` splices in
+ * the monthly archive files written by scripts/decay-scratchpad.ts so
+ * subject/search filters can reach past the live rolling window.
  */
 export async function getObservations(
   topic: "patterns" | "nudges" | "scratchpad",
@@ -281,6 +445,7 @@ export async function getObservations(
   type?: string,
   subject?: string,
   search?: string,
+  includeArchive?: boolean,
 ): Promise<string> {
   const entry = frontmatterIndex.findOne({
     type: "ai-observation",
@@ -309,7 +474,29 @@ export async function getObservations(
     return content;
   }
 
-  const lines = content.split("\n");
+  // Optionally splice in the monthly archive files (written by
+  // scripts/decay-scratchpad.ts) so subject/search filters can reach past the
+  // live rolling window. Archive entries come first; the combined list is
+  // re-sorted by timestamp below since decay appends out of order.
+  let combined = content;
+  if (includeArchive) {
+    const dir = join(config.vaultPath, "AI-Observations");
+    const names = (await readdir(dir))
+      .filter((n) => /^scratchpad-archive-\d{4}-\d{2}\.md$/.test(n))
+      .sort();
+    const archived: string[] = [];
+    for (const n of names) {
+      const { content: c } = matter(await readFile(join(dir, n), "utf-8"));
+      const idx = c.search(/^### \d{4}-\d{2}-\d{2}\b/m);
+      if (idx >= 0) archived.push(c.slice(idx));
+    }
+    const liveIdx = content.search(/^### \d{4}-\d{2}-\d{2}\b/m);
+    const livePreamble = liveIdx >= 0 ? content.slice(0, liveIdx) : content;
+    const liveEntries = liveIdx >= 0 ? content.slice(liveIdx) : "";
+    combined = [livePreamble, ...archived, liveEntries].join("\n");
+  }
+
+  const lines = combined.split("\n");
   const entryStartRe = /^### (\d{4}-\d{2}-\d{2})\b/;
 
   const header: string[] = [];
@@ -346,6 +533,12 @@ export async function getObservations(
     }
   }
   flush();
+
+  if (includeArchive) {
+    // Header is "### YYYY-MM-DD HH:MM | ..." so a plain string compare on the
+    // first 16 chars sorts chronologically.
+    entries.sort((a, b) => a.text.slice(4, 20).localeCompare(b.text.slice(4, 20)));
+  }
 
   let filtered = entries;
   if (days !== undefined) {

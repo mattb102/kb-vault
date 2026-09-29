@@ -4,7 +4,8 @@ import path from "path";
 
 import { config } from "../../core/config.js";
 import { frontmatterIndex } from "../../core/frontmatter.js";
-import { getObservations } from "../../core/observer.js";
+import { getObservations, sweepExpiredNudges } from "../../core/observer.js";
+import { topNudges } from "../../core/nudges.js";
 import { gitCommitAndPush } from "../../core/sync.js";
 import { today } from "../../core/utils.js";
 
@@ -144,7 +145,11 @@ export interface Gathered {
 export async function gather(s: ReportSettings): Promise<Gathered> {
   await safe("frontmatter rebuild", () => frontmatterIndex.rebuild());
 
-  const [identity, nudges, observations, patterns, trackers, wx, prior] =
+  // Expire any overdue dated nudges before building the report so the prompt
+  // never shows a row that should already be in the archive.
+  await safe("sweep expired nudges", () => sweepExpiredNudges(0));
+
+  const [identity, rawNudges, observations, patterns, trackers, wx, prior] =
     await Promise.all([
       safe("identity", () => readVaultFile("Core/core-identity.md", 6000)),
       safe("nudges", () => readVaultFile("AI-Observations/nudges.md", 3000)),
@@ -154,6 +159,11 @@ export async function gather(s: ReportSettings): Promise<Gathered> {
       safe("weather", () => weather(s.location)),
       safe("prior reports", () => priorReports()),
     ]);
+
+  // topNudges ranks by due date (overdue → due today → coming up → undated
+  // P0/P1). Falls back to priority-sort when no nudge has a due date, so
+  // vaults without the Due column still get a sensible list.
+  const nudges = rawNudges ? (topNudges(rawNudges) ?? rawNudges) : null;
 
   return {
     date: today(),
