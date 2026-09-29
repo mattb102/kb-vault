@@ -16,6 +16,9 @@
     "promote-patterns": "tsx scripts/promote-patterns.ts",
     "morning-report": "tsx scripts/morning-report.ts",
     "nudge-decay": "tsx scripts/nudge-decay.ts",
+    "nudge-push": "tsx scripts/nudge-push.ts",
+    "evening-nudges": "tsx scripts/evening-nudges.ts",
+    "health-check": "tsx scripts/health-check.ts",
     "decay-scratchpad": "tsx scripts/decay-scratchpad.ts",
     "reconcile-vault": "tsx scripts/reconcile-vault.ts",
     "audit-vault": "tsx scripts/audit-vault.ts"
