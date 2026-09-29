@@ -180,14 +180,27 @@ if grep -q "^ANTHROPIC_API_KEY=sk-" "$REPO/.env" 2>/dev/null; then
   # across daylight saving without anyone touching the crontab.
   REPORT_CRON_A="0 10 * * * bash $REPO/scripts/cron-morning-report.sh >> $REPO/logs/morning-report.log 2>&1"
   REPORT_CRON_B="0 11 * * * bash $REPO/scripts/cron-morning-report.sh >> $REPO/logs/morning-report.log 2>&1"
+  # Weekly nudge decay — Sunday 4:30am (after promote_patterns).
+  # Expires stale P2/P3 nudges and logs them as abandoned-intentions observations.
+  NUDGE_DECAY_CRON="30 4 * * 0 bash $REPO/scripts/cron-nudge-decay.sh >> /var/log/vault-cron.log 2>&1"
+  # Nightly scratchpad decay — 3am. Archives entries older than the configured
+  # window to monthly files so the live scratchpad stays a rolling window.
+  SCRATCHPAD_DECAY_CRON="0 3 * * * bash $REPO/scripts/cron-decay-scratchpad.sh >> /var/log/vault-cron.log 2>&1"
   (
-    crontab -l 2>/dev/null | grep -v "promote-patterns" | grep -v "cron-rebuild-identity" | grep -v "cron-morning-report"
+    crontab -l 2>/dev/null \
+      | grep -v "promote-patterns" \
+      | grep -v "cron-rebuild-identity" \
+      | grep -v "cron-morning-report" \
+      | grep -v "cron-nudge-decay" \
+      | grep -v "cron-decay-scratchpad"
     echo "$PROMOTE_CRON"
     echo "$IDENTITY_CRON"
     echo "$REPORT_CRON_A"
     echo "$REPORT_CRON_B"
+    echo "$NUDGE_DECAY_CRON"
+    echo "$SCRATCHPAD_DECAY_CRON"
   ) | crontab -
-  ok "Crons installed: promote_patterns (Sun 4am), identity rebuild (nightly 4:05am), morning report (6am local)"
+  ok "Crons installed: promote_patterns (Sun 4am), identity rebuild (nightly 4:05am), morning report (6am local), nudge decay (Sun 4:30am), scratchpad decay (nightly 3am)"
 else
   echo "  (Skipping crons — ANTHROPIC_API_KEY not set in .env."
   echo "   Add the key and re-run to enable. See comments in .env.)"

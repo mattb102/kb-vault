@@ -73,3 +73,15 @@ plugins:
     # tone: "blunt, no pep talk"
     # location: "Boston"          # omit to skip the weather line
     # trackers: [mood, sleep]     # tracker ids to summarize
+
+# Retention / decay settings for the automated cleanup scripts.
+# These are read by scripts/nudge-decay.ts and scripts/decay-scratchpad.ts.
+# The bootstrap-vps.sh installs the corresponding crons when ANTHROPIC_API_KEY is set.
+decay:
+  # Days a P2/P3 open nudge must go untouched before nudge-decay.ts expires it.
+  # P0/P1 nudges are never auto-expired — a stale high-priority nudge is a signal.
+  nudgeDecayDays: 60
+  # Days before a scratchpad entry is moved from the live file to the monthly
+  # archive. Archived entries are still searchable via get_observations with
+  # include_archive=true. The live file is a rolling window of this size.
+  scratchpadDecayDays: 120

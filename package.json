@@ -14,7 +14,9 @@
     "generate-identity": "tsx scripts/generate-identity.ts",
     "rebuild-identity": "tsx scripts/rebuild-identity.ts",
     "promote-patterns": "tsx scripts/promote-patterns.ts",
-    "morning-report": "tsx scripts/morning-report.ts"
+    "morning-report": "tsx scripts/morning-report.ts",
+    "nudge-decay": "tsx scripts/nudge-decay.ts",
+    "decay-scratchpad": "tsx scripts/decay-scratchpad.ts"
   },
   "keywords": [
     "mcp",
