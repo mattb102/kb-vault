@@ -8,6 +8,8 @@ import { getObservations, sweepExpiredNudges } from "../../core/observer.js";
 import { topNudges } from "../../core/nudges.js";
 import { gitCommitAndPush } from "../../core/sync.js";
 import { today } from "../../core/utils.js";
+import { latestReconcileSummary } from "../../core/reconcile.js";
+import { latestAuditPath } from "../../core/auditor.js";
 
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5";
 
@@ -140,6 +142,7 @@ export interface Gathered {
   trackers: string;
   weather: string | null;
   prior: string;
+  vaultChanges: string | null;
 }
 
 export async function gather(s: ReportSettings): Promise<Gathered> {
@@ -149,7 +152,7 @@ export async function gather(s: ReportSettings): Promise<Gathered> {
   // never shows a row that should already be in the archive.
   await safe("sweep expired nudges", () => sweepExpiredNudges(0));
 
-  const [identity, rawNudges, observations, patterns, trackers, wx, prior] =
+  const [identity, rawNudges, observations, patterns, trackers, wx, prior, vaultChanges] =
     await Promise.all([
       safe("identity", () => readVaultFile("Core/core-identity.md", 6000)),
       safe("nudges", () => readVaultFile("AI-Observations/nudges.md", 3000)),
@@ -158,6 +161,15 @@ export async function gather(s: ReportSettings): Promise<Gathered> {
       safe("trackers", () => trackerSummary(s.trackers)),
       safe("weather", () => weather(s.location)),
       safe("prior reports", () => priorReports()),
+      safe("vault changes", async () => {
+        const summary = await latestReconcileSummary();
+        const audit = await latestAuditPath();
+        const parts = [
+          summary && !/no files changed/.test(summary) ? summary : null,
+          audit ? `- Monthly read-only audit report written: ${audit}` : null,
+        ].filter(Boolean);
+        return parts.length ? (parts as string[]).join("\n") : null;
+      }),
     ]);
 
   // topNudges ranks by due date (overdue → due today → coming up → undated
@@ -175,6 +187,7 @@ export async function gather(s: ReportSettings): Promise<Gathered> {
     trackers: trackers || "(no trackers configured)",
     weather: wx || null,
     prior: prior || "(none yet)",
+    vaultChanges: vaultChanges || null,
   };
 }
 
@@ -203,6 +216,10 @@ function buildPrompt(g: Gathered, s: ReportSettings, owner: string): string {
     section("What you've noticed in the last 3 days", g.observations),
     `\n## Recent journal entries\n${g.journals}\n`,
     `\n## Trackers\n${g.trackers}\n`,
+    section(
+      "Vault changes overnight (reconcile / audit)",
+      g.vaultChanges,
+    ),
     `\n## Your last few reports — do NOT repeat these angles\n${g.prior}\n`,
     "",
     "Produce exactly two sections, with these headers and nothing before or after:",
