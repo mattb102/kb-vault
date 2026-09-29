@@ -13,6 +13,7 @@ import { register as registerReadTools } from "./tools/read.js";
 import { register as registerWriteTools } from "./tools/write.js";
 import { register as registerObserveTools } from "./tools/observe.js";
 import type { PluginModule } from "./plugins/types.js";
+import { buildServerInstructions } from "./core/vault-manifest.js";
 
 // ─── PLUGIN LOADING ────────────────────────────────────────────────
 // Enabled plugins are imported once at startup. Their `register` is called
@@ -37,10 +38,13 @@ async function loadPlugins(): Promise<void> {
 }
 
 function createServer(): McpServer {
-  const server = new McpServer({
-    name: config.serverName,
-    version: "1.0.0",
-  });
+  // Server instructions are built once per session from the optional vault
+  // manifest files. Both files are optional; their absence is not an error.
+  const instructions = buildServerInstructions();
+  const server = new McpServer(
+    { name: config.serverName, version: "1.0.0" },
+    instructions ? { instructions } : undefined,
+  );
 
   // Core tools — always on. This is "the product".
   registerReadTools(server);

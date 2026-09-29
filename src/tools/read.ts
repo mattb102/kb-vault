@@ -7,6 +7,7 @@ import { hybridSearch } from "../core/search.js";
 import { gitPull } from "../core/sync.js";
 import { getObservations } from "../core/observer.js";
 import { absPath } from "../core/utils.js";
+import { loadWriteChecklist, loadRoutingManifest } from "../core/vault-manifest.js";
 
 /** Register the core read tools (search, read, find, identity, journals, observations). */
 export function register(server: McpServer): void {
@@ -106,7 +107,7 @@ export function register(server: McpServer): void {
 
   server.tool(
     "get_identity",
-    "Return the core identity document (the summary of who the user is).",
+    "Return the core identity document (who the user is), optionally prefixed with the write checklist and routing manifest when those files exist in the vault.",
     {},
     async () => {
       await gitPull();
@@ -118,7 +119,14 @@ export function register(server: McpServer): void {
         };
       }
       const content = await readFile(entry.path, "utf-8");
-      return { content: [{ type: "text", text: content }] };
+      const checklist = loadWriteChecklist();
+      const routing = loadRoutingManifest();
+      const parts = [
+        ...(checklist ? [checklist] : []),
+        content.trim(),
+        ...(routing ? [routing] : []),
+      ];
+      return { content: [{ type: "text", text: parts.join("\n\n---\n\n") }] };
     }
   );
 

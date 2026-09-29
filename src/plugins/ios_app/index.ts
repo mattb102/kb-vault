@@ -15,6 +15,7 @@ import {
   sendPush,
   vapidPublicKey,
 } from "./logic.js";
+import { recordSend } from "../../core/push-ledger.js";
 
 /**
  * ios_app — the phone half of the vault.
@@ -323,6 +324,11 @@ export function register(server: McpServer): void {
           };
         }
         const r = await sendPush(title, body);
+        // Record in the shared ledger so cap/gap/no-repeat checks across all
+        // push sources (nudge-push, evening-nudges, this tool) are consistent.
+        try {
+          await recordSend({ goal: title, title, source: "send_phone_notification" });
+        } catch { /* ledger failure must never block the tool response */ }
         return {
           content: [
             {

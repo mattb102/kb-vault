@@ -74,6 +74,12 @@ interface FileConfig {
   reconcile?: ReconcileConfig;
   /** Monthly audit settings. Off by default (requires claude CLI). */
   audit?: AuditConfig;
+  /**
+   * Vault-relative path to the write checklist prepended to server instructions
+   * and the get_identity response. Default: Core/write-checklist.md.
+   * Create the file from config/write-checklist.example.md as a starting point.
+   */
+  checklistFile?: string;
 }
 
 function loadFileConfig(): FileConfig {
@@ -158,6 +164,8 @@ export const config = {
     enabled: file.audit?.enabled ?? false,
     groups: file.audit?.groups,
   },
+
+  checklistFile: file.checklistFile || "Core/write-checklist.md",
 
   chunkSize: 800, // target tokens per chunk
   chunkOverlap: 100,

@@ -169,6 +169,56 @@ export async function logStream(content: string): Promise<string> {
 }
 
 /**
+ * Append a formatted entry to an interest note located by frontmatter
+ * (interest + topic) — e.g. a fishing catch, a ski day, a new spot — without
+ * needing the file path. The entry is appended verbatim: match the target note's
+ * existing format (dated H2 block for catch-log, a table row for season-log, a
+ * bullet for spots/gear). Unknown interest/topic returns the valid options rather
+ * than failing blind.
+ */
+export async function logInterestEntry(
+  interest: string,
+  topic: string,
+  entry: string,
+): Promise<string> {
+  await frontmatterIndex.rebuild();
+  const note = frontmatterIndex.findOne({ interest, topic });
+  if (!note) {
+    const forInterest = frontmatterIndex
+      .find({ interest })
+      .filter((e) => e.frontmatter.topic)
+      .map((e) => `${e.frontmatter.topic} (${e.relPath})`);
+    if (forInterest.length) {
+      throw new Error(
+        `No note with interest=${interest} topic=${topic}. Topics for "${interest}": ${forInterest.join(", ")}`,
+      );
+    }
+    const interests = [
+      ...new Set(
+        frontmatterIndex
+          .all()
+          .map((e) => e.frontmatter.interest)
+          .filter((v): v is string => typeof v === "string"),
+      ),
+    ].sort();
+    throw new Error(
+      `No notes with interest=${interest}. Known interests: ${interests.length ? interests.join(", ") : "(none yet)"}`,
+    );
+  }
+
+  const raw = await readFile(note.path, "utf-8");
+  let updated = raw.trimEnd() + "\n\n" + entry.trim() + "\n";
+  // Keep the frontmatter updated: date up to the tick
+  updated = updated.replace(/^updated: .*$/m, `updated: '${today()}'`);
+
+  await writeFile(note.path, updated);
+  await frontmatterIndex.indexFile(note.path);
+  await gitCommitAndPush(`Log ${interest}/${topic} entry`);
+
+  return `Logged to ${note.relPath}`;
+}
+
+/**
  * Update a section in a core identity file.
  * Finds by frontmatter: type=core, topic=<topic>.
  */

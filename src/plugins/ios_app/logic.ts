@@ -342,6 +342,11 @@ export async function countSubscriptions(): Promise<number> {
   return (await loadSubs()).length;
 }
 
+/** The stored subscriptions, read-only — for dry-run / diagnostics. */
+export async function listSubscriptions(): Promise<any[]> {
+  return loadSubs();
+}
+
 /**
  * Push one notification to every registered device.
  *

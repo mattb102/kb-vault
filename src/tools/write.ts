@@ -8,6 +8,7 @@ import {
   createNote,
   logStream,
   updateIdentityField,
+  logInterestEntry,
 } from "../core/writer.js";
 
 /** Register the core write-back tools. Each persists to the vault and commits via git. */
@@ -99,6 +100,24 @@ export function register(server: McpServer): void {
     async ({ topic, section, content }) => {
       const result = await updateIdentityField(topic, section, content);
       return { content: [{ type: "text", text: result }] };
+    }
+  );
+
+  server.tool(
+    "log_interest_entry",
+    "Append a formatted entry to an interest note located by frontmatter (interest + topic) — e.g. a fishing catch, a ski day, new spot intel — without needing the file path. IMPORTANT: the entry is appended verbatim, so match the target note's existing format (dated H2 blocks for catch-log, a table row for season-log, a bullet for spots/gear); use read_note first if unsure. Unknown interest/topic returns the valid options.",
+    {
+      interest: z.string().describe("Interest slug from frontmatter, e.g. 'fishing', 'skiing'"),
+      topic: z.string().describe("Topic slug from frontmatter, e.g. 'catch-log', 'season-log', 'spots', 'gear'"),
+      entry: z.string().describe("The formatted markdown entry, matching the target note's convention"),
+    },
+    async ({ interest, topic, entry }) => {
+      try {
+        const result = await logInterestEntry(interest, topic, entry);
+        return { content: [{ type: "text", text: result }] };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: String(e?.message || e) }], isError: true };
+      }
     }
   );
 }
