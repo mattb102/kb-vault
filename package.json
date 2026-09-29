@@ -16,7 +16,9 @@
     "promote-patterns": "tsx scripts/promote-patterns.ts",
     "morning-report": "tsx scripts/morning-report.ts",
     "nudge-decay": "tsx scripts/nudge-decay.ts",
-    "decay-scratchpad": "tsx scripts/decay-scratchpad.ts"
+    "decay-scratchpad": "tsx scripts/decay-scratchpad.ts",
+    "reconcile-vault": "tsx scripts/reconcile-vault.ts",
+    "audit-vault": "tsx scripts/audit-vault.ts"
   },
   "keywords": [
     "mcp",

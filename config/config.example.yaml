@@ -85,3 +85,31 @@ decay:
   # archive. Archived entries are still searchable via get_observations with
   # include_archive=true. The live file is a rolling window of this size.
   scratchpadDecayDays: 120
+
+# ─── Nightly reconcile (requires claude CLI, off by default) ───────────────
+# Reads yesterday's scratchpad observations, asks Claude which canonical files
+# they affect, proposes guarded rewrites, and logs every change with its diff
+# to AI-Observations/reconcile/<date>.md. The morning report surfaces what changed.
+#
+# Requires: `claude` CLI on PATH with subscription auth (CLAUDE_CODE_OAUTH_TOKEN
+# or stored credentials in ~/.claude). Does NOT use ANTHROPIC_API_KEY.
+# Install the cron: bootstrap-vps.sh adds it when reconcile.enabled is true.
+reconcile:
+  enabled: false            # set to true to activate the nightly cron
+  days: 1                   # how many days of observations to read each run
+  # maxFilesPerRun: 8       # cap on files rewritten per run (default 8)
+  # routingFile: Core/routing.md  # vault-relative path to your routing manifest
+
+# ─── Monthly audit (requires claude CLI, off by default) ───────────────────
+# On the 1st of each month, reads every auditable top-level folder and asks
+# Claude for per-file verdicts (KEEP / CLEAN / MERGE / DELETE). Read-only —
+# nothing is applied. Report goes to AI-Observations/audits/<date>.md and the
+# morning report links it.
+#
+# Requires: `claude` CLI on PATH with subscription auth (same as reconcile).
+audit:
+  enabled: false            # set to true to activate the monthly cron
+  # groups:                 # optional: explicit list of top-level folders to audit
+  #   - Core               # if omitted, all non-excluded folders are auto-discovered
+  #   - Work
+  #   - Health

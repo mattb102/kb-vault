@@ -20,6 +20,39 @@ interface DecayConfig {
   scratchpadDecayDays?: number;
 }
 
+interface ReconcileConfig {
+  /**
+   * Enable the nightly reconcile cron. Requires the claude CLI on PATH with
+   * subscription auth. Default: false.
+   */
+  enabled?: boolean;
+  /** How many days of observations to read each run (default: 1). */
+  days?: number;
+  /** Max files to rewrite per run (default: 8). */
+  maxFilesPerRun?: number;
+  /**
+   * Vault-relative path to the routing manifest. The manifest is a markdown
+   * table telling Claude which type of fact belongs in which file. If absent,
+   * the reconciler proceeds without routing guidance.
+   * Default: Core/routing.md
+   */
+  routingFile?: string;
+}
+
+interface AuditConfig {
+  /**
+   * Enable the monthly audit cron. Requires the claude CLI on PATH with
+   * subscription auth. Default: false.
+   */
+  enabled?: boolean;
+  /**
+   * Top-level vault folders to audit. If omitted, all non-excluded top-level
+   * directories are auto-discovered (AI-Observations, Reports, _templates
+   * are always skipped).
+   */
+  groups?: string[];
+}
+
 interface FileConfig {
   vaultPath?: string;
   ownerName?: string;
@@ -37,6 +70,10 @@ interface FileConfig {
   plugins?: Record<string, any>;
   /** Retention / decay settings for the automated cleanup scripts. */
   decay?: DecayConfig;
+  /** Nightly reconcile settings. Off by default (requires claude CLI). */
+  reconcile?: ReconcileConfig;
+  /** Monthly audit settings. Off by default (requires claude CLI). */
+  audit?: AuditConfig;
 }
 
 function loadFileConfig(): FileConfig {
@@ -106,6 +143,20 @@ export const config = {
   decay: {
     nudgeDecayDays: file.decay?.nudgeDecayDays ?? 60,
     scratchpadDecayDays: file.decay?.scratchpadDecayDays ?? 120,
+  },
+
+  // Nightly reconcile (requires claude CLI).
+  reconcileConfig: {
+    enabled: file.reconcile?.enabled ?? false,
+    days: file.reconcile?.days ?? 1,
+    maxFilesPerRun: file.reconcile?.maxFilesPerRun ?? 8,
+    routingFile: file.reconcile?.routingFile ?? "Core/routing.md",
+  },
+
+  // Monthly audit (requires claude CLI).
+  auditConfig: {
+    enabled: file.audit?.enabled ?? false,
+    groups: file.audit?.groups,
   },
 
   chunkSize: 800, // target tokens per chunk

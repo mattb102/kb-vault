@@ -186,21 +186,34 @@ if grep -q "^ANTHROPIC_API_KEY=sk-" "$REPO/.env" 2>/dev/null; then
   # Nightly scratchpad decay — 3am. Archives entries older than the configured
   # window to monthly files so the live scratchpad stays a rolling window.
   SCRATCHPAD_DECAY_CRON="0 3 * * * bash $REPO/scripts/cron-decay-scratchpad.sh >> /var/log/vault-cron.log 2>&1"
+  # Nightly vault reconcile — 3:30am, after scratchpad decay and before the
+  # 4:05am identity rebuild. Reads yesterday's observations, triages which
+  # canonical files they affect, applies guarded rewrites, logs diffs.
+  # No-ops unless reconcile.enabled: true is set in config/config.yaml.
+  RECONCILE_CRON="30 3 * * * bash $REPO/scripts/cron-reconcile.sh >> /var/log/vault-cron.log 2>&1"
+  # Monthly read-only vault audit — 1st of the month at 2:00am. Reads every
+  # auditable top-level folder and writes a verdict report. No-ops unless
+  # audit.enabled: true is set in config/config.yaml.
+  AUDIT_CRON="0 2 1 * * bash $REPO/scripts/cron-audit-vault.sh >> /var/log/vault-cron.log 2>&1"
   (
     crontab -l 2>/dev/null \
       | grep -v "promote-patterns" \
       | grep -v "cron-rebuild-identity" \
       | grep -v "cron-morning-report" \
       | grep -v "cron-nudge-decay" \
-      | grep -v "cron-decay-scratchpad"
+      | grep -v "cron-decay-scratchpad" \
+      | grep -v "cron-reconcile" \
+      | grep -v "cron-audit-vault"
     echo "$PROMOTE_CRON"
     echo "$IDENTITY_CRON"
     echo "$REPORT_CRON_A"
     echo "$REPORT_CRON_B"
     echo "$NUDGE_DECAY_CRON"
     echo "$SCRATCHPAD_DECAY_CRON"
+    echo "$RECONCILE_CRON"
+    echo "$AUDIT_CRON"
   ) | crontab -
-  ok "Crons installed: promote_patterns (Sun 4am), identity rebuild (nightly 4:05am), morning report (6am local), nudge decay (Sun 4:30am), scratchpad decay (nightly 3am)"
+  ok "Crons installed: promote_patterns (Sun 4am), identity rebuild (nightly 4:05am), morning report (6am local), nudge decay (Sun 4:30am), scratchpad decay (nightly 3am), reconcile (nightly 3:30am — enable in config), audit (monthly 1st 2am — enable in config)"
 else
   echo "  (Skipping crons — ANTHROPIC_API_KEY not set in .env."
   echo "   Add the key and re-run to enable. See comments in .env.)"
