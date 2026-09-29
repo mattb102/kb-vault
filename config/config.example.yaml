@@ -50,6 +50,14 @@ plugins:
   ios_app:
     title: "My Vault"
     trackers: []
+    # Push rate-limiting — shared by nudge-push, evening-nudges, and the
+    # send_phone_notification MCP tool. All sends are logged to data/push-ledger.json.
+    push:
+      dailyCap: 3          # max distinct topics pushed per Eastern day (0 = no cap)
+      minGapMinutes: 60    # min minutes between any two automated pushes
+      noRepeatDays: 14     # days before the same topic can push again
+      startHour: 9         # earliest Eastern hour for automated pushes (nudge-push)
+      endHour: 21          # latest Eastern hour for automated pushes (nudge-push)
     #  - id: mood
     #    label: "Mood"
     #    prompt: "How's today going?"
@@ -85,6 +93,14 @@ decay:
   # archive. Archived entries are still searchable via get_observations with
   # include_archive=true. The live file is a rolling window of this size.
   scratchpadDecayDays: 120
+
+# ─── Write checklist (optional) ────────────────────────────────────────────
+# Vault-relative path to a short checklist of write rules. When present it is
+# prepended to every get_identity response and to the MCP server instructions,
+# so Claude reads the rules before every write operation in the session.
+# Copy config/write-checklist.example.md into your vault as a starting point:
+#   cp config/write-checklist.example.md $VAULT_PATH/Core/write-checklist.md
+# checklistFile: Core/write-checklist.md    # default — omit to use this path
 
 # ─── Nightly reconcile (requires claude CLI, off by default) ───────────────
 # Reads yesterday's scratchpad observations, asks Claude which canonical files
