@@ -6,6 +6,7 @@ import {
   logPattern,
   logNudge,
   clearNudge,
+  editNudge,
   writeWeeklySummary,
 } from "../core/observer.js";
 import { promotePatterns } from "../core/promoter.js";
@@ -121,6 +122,57 @@ export function register(server: McpServer): void {
     },
     async ({ goal, resolution, status }) => {
       const result = await clearNudge(goal, resolution, status);
+      return { content: [{ type: "text", text: result }] };
+    }
+  );
+
+  server.tool(
+    "edit_nudge",
+    "Edit an open or in_progress nudge row in place — change goal text, note, priority, or due date without clearing and re-logging (which loses First Mentioned and clutters the archive). Provide at least one editable field.",
+    {
+      goal: z
+        .string()
+        .describe(
+          "Exact goal text (or unambiguous substring) of an open/in_progress nudge to edit",
+        ),
+      new_goal: z
+        .string()
+        .optional()
+        .describe("Replace the goal text with this value"),
+      note: z
+        .string()
+        .optional()
+        .describe("Replace the note cell with this value"),
+      append_note: z
+        .string()
+        .optional()
+        .describe("Append this text to the existing note (space-separated)"),
+      priority: z
+        .enum(["P0", "P1", "P2", "P3"])
+        .optional()
+        .describe("New priority"),
+      due: z
+        .string()
+        .optional()
+        .describe(
+          "New due date (YYYY-MM-DD), or empty string to clear the due date",
+        ),
+      last_mentioned: z
+        .string()
+        .optional()
+        .describe(
+          "Update the Last Checked column to this date (YYYY-MM-DD). Defaults to today (America/New_York) when omitted.",
+        ),
+    },
+    async ({ goal, new_goal, note, append_note, priority, due, last_mentioned }) => {
+      const result = await editNudge(goal, {
+        new_goal,
+        note,
+        append_note,
+        priority,
+        due,
+        last_mentioned,
+      });
       return { content: [{ type: "text", text: result }] };
     }
   );

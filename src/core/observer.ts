@@ -89,6 +89,11 @@ function normalizeGoal(s: string): string {
   return s.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+/** Escape pipe characters and newlines for use in a markdown table cell. */
+export function sanitizeCell(s: string): string {
+  return s.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+}
+
 /**
  * Find an open or in_progress nudge row whose goal matches (case-insensitive,
  * whitespace-normalized). Returns a description string if found, null otherwise.
@@ -162,11 +167,9 @@ export async function logNudge(
     return `Nudge already exists — not added. Existing: ${existing}`;
   }
 
-  const sanitize = (s: string) =>
-    s.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
   // Column order: goal | first | last | status | priority | note | resolution | due
   // Empty resolution cell keeps the table rectangular (8 columns); due is last.
-  const row = `| ${sanitize(goal)} | ${lastMentioned} | ${today()} | open | ${priority} | ${sanitize(note || "")} | | ${due || ""} |`;
+  const row = `| ${sanitizeCell(goal)} | ${lastMentioned} | ${today()} | open | ${priority} | ${sanitizeCell(note || "")} | | ${due || ""} |`;
 
   // In-place header upgrade: if the live table has 7 columns (no Due), add it.
   // Matches any 7-column nudge header regardless of capitalisation or spacing
@@ -214,8 +217,6 @@ export async function clearNudge(
   }
 
   const raw = await readFile(entry.path, "utf-8");
-  const sanitize = (s: string) =>
-    s.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
 
   // Anchor on the goal as a full cell: | <goal> |
   const goalRe = new RegExp(
@@ -240,7 +241,7 @@ export async function clearNudge(
     }
 
     if (resolution !== undefined) {
-      const resCell = ` ${sanitize(resolution)} `;
+      const resCell = ` ${sanitizeCell(resolution)} `;
       // Resolution lives at index 7 (after goal, first, last, status, priority, note).
       // Index 7 is safe because goal/first/last/status/priority never contain pipes.
       if (cells.length >= 9) {
@@ -432,6 +433,205 @@ function sortNudgesByPriority(content: string): string {
 }
 
 /**
+ * Filter out pattern sections that contain a RETIRED marker.
+ * A section is a `### ` block; sections with `> **RETIRED` in them are dropped.
+ */
+export function filterRetiredPatterns(content: string): string {
+  const lines = content.split("\n");
+  const preamble: string[] = [];
+  const sections: { lines: string[]; retired: boolean }[] = [];
+  let current: { lines: string[]; retired: boolean } | null = null;
+
+  for (const line of lines) {
+    if (line.startsWith("### ")) {
+      if (current) sections.push(current);
+      current = { lines: [line], retired: false };
+    } else if (current) {
+      current.lines.push(line);
+      if (/^>\s*\*\*RETIRED\b/.test(line)) {
+        current.retired = true;
+      }
+    } else {
+      preamble.push(line);
+    }
+  }
+  if (current) sections.push(current);
+
+  const kept = sections.filter((s) => !s.retired).flatMap((s) => s.lines);
+  return [...preamble, ...kept].join("\n");
+}
+
+interface NudgeEditOpts {
+  new_goal?: string;
+  note?: string;
+  append_note?: string;
+  priority?: "P0" | "P1" | "P2" | "P3";
+  due?: string;
+  last_mentioned?: string;
+}
+
+/**
+ * Pure helper: find and apply an in-place edit to a nudge row.
+ * Matches open/in_progress rows only; tries exact goal match first, then
+ * case-insensitive substring (must be unambiguous). Never changes First
+ * Mentioned, Status, or Resolution. Exported for testing.
+ */
+export function applyNudgeEdit(
+  raw: string,
+  goal: string,
+  opts: NudgeEditOpts,
+  todayStr: string,
+): { updated: string; changed: string[]; matchedGoal: string } {
+  const { new_goal, note, append_note, priority, due, last_mentioned } = opts;
+  const lines = raw.split("\n");
+  const normalized = normalizeGoal(goal);
+
+  interface ParsedRow {
+    lineIdx: number;
+    cells: string[];
+    rowGoal: string;
+    rowStatus: string;
+  }
+
+  const parseActiveRow = (line: string, i: number): ParsedRow | null => {
+    if (!line.trimStart().startsWith("|")) return null;
+    const cells = line.split(/(?<!\\)\|/);
+    if (cells.length < 5) return null;
+    const rowGoal = (cells[1] ?? "").replace(/\\\|/g, "|").trim();
+    const rowStatus = (cells[4] ?? "").trim().toLowerCase();
+    if (rowStatus !== "open" && rowStatus !== "in_progress") return null;
+    return { lineIdx: i, cells, rowGoal, rowStatus };
+  };
+
+  const activeRows: ParsedRow[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const r = parseActiveRow(lines[i], i);
+    if (r) activeRows.push(r);
+  }
+
+  const exactMatches = activeRows.filter(
+    (r) => normalizeGoal(r.rowGoal) === normalized,
+  );
+  let match: ParsedRow;
+  if (exactMatches.length === 1) {
+    match = exactMatches[0];
+  } else if (exactMatches.length > 1) {
+    const candidates = exactMatches
+      .map((r) => `"${r.rowGoal}" (${r.rowStatus})`)
+      .join(", ");
+    throw new Error(
+      `edit_nudge: "${goal}" matches multiple nudges — be more specific: ${candidates}`,
+    );
+  } else {
+    const subMatches = activeRows.filter((r) =>
+      normalizeGoal(r.rowGoal).includes(normalized),
+    );
+    if (subMatches.length === 0) {
+      throw new Error(
+        `edit_nudge: no open/in_progress nudge found matching "${goal}"`,
+      );
+    }
+    if (subMatches.length > 1) {
+      const candidates = subMatches
+        .map((r) => `"${r.rowGoal}" (${r.rowStatus})`)
+        .join(", ");
+      throw new Error(
+        `edit_nudge: "${goal}" matches multiple nudges — be more specific: ${candidates}`,
+      );
+    }
+    match = subMatches[0];
+  }
+
+  const cells = [...match.cells];
+  const changed: string[] = [];
+
+  // cells[3] = Last Checked — always stamp
+  cells[3] = ` ${last_mentioned ?? todayStr} `;
+  changed.push(`last_checked -> ${last_mentioned ?? todayStr}`);
+
+  if (new_goal !== undefined) {
+    cells[1] = ` ${sanitizeCell(new_goal)} `;
+    changed.push(`goal -> "${new_goal}"`);
+  }
+  if (note !== undefined) {
+    if (cells.length >= 7) cells[6] = ` ${sanitizeCell(note)} `;
+    changed.push(`note -> "${note}"`);
+  } else if (append_note !== undefined) {
+    if (cells.length >= 7) {
+      const existingRaw = (cells[6] ?? "").trim();
+      cells[6] = existingRaw
+        ? ` ${existingRaw} ${sanitizeCell(append_note)} `
+        : ` ${sanitizeCell(append_note)} `;
+    }
+    changed.push(`note appended: "${append_note}"`);
+  }
+  if (priority !== undefined) {
+    cells[5] = ` ${priority} `;
+    changed.push(`priority -> ${priority}`);
+  }
+  if (due !== undefined) {
+    if (cells.length >= 9) {
+      cells[8] = ` ${due} `;
+    } else {
+      cells[cells.length - 1] = ` ${due} `;
+      cells.push("");
+    }
+    changed.push(due ? `due -> ${due}` : `due cleared`);
+  }
+
+  lines[match.lineIdx] = cells.join("|");
+  return {
+    updated: lines.join("\n"),
+    changed,
+    matchedGoal: new_goal !== undefined ? new_goal : match.rowGoal,
+  };
+}
+
+/**
+ * Edit an open or in_progress nudge row in place. Never changes First
+ * Mentioned, Status, or Resolution. Provide at least one editable field.
+ */
+export async function editNudge(
+  goal: string,
+  opts: NudgeEditOpts,
+): Promise<string> {
+  const { new_goal, note, append_note, priority, due, last_mentioned } = opts;
+  if (
+    new_goal === undefined &&
+    note === undefined &&
+    append_note === undefined &&
+    priority === undefined &&
+    due === undefined &&
+    last_mentioned === undefined
+  ) {
+    throw new Error(
+      "edit_nudge: at least one of new_goal, note, append_note, priority, due, or last_mentioned must be provided",
+    );
+  }
+
+  const entry = frontmatterIndex.findOne({
+    type: "ai-observation",
+    topic: "nudges",
+  });
+  if (!entry) {
+    throw new Error("AI nudges file not found");
+  }
+
+  const raw = await readFile(entry.path, "utf-8");
+  const { updated, changed, matchedGoal } = applyNudgeEdit(
+    raw,
+    goal,
+    opts,
+    today(),
+  );
+
+  await writeFile(entry.path, updated);
+  await gitCommitAndPush(`Edit nudge: ${matchedGoal}`);
+
+  return `Nudge updated: "${matchedGoal}" — ${changed.join("; ")}`;
+}
+
+/**
  * Read AI observations for a given topic. For scratchpad, `days` filters to
  * entries from the last N days (inclusive of today), `maxEntries` caps to the
  * most-recent N entries as a safety fallback, and `includeArchive` splices in
@@ -446,6 +646,7 @@ export async function getObservations(
   subject?: string,
   search?: string,
   includeArchive?: boolean,
+  includeRetired?: boolean,
 ): Promise<string> {
   const entry = frontmatterIndex.findOne({
     type: "ai-observation",
@@ -463,6 +664,10 @@ export async function getObservations(
     return sortNudgesByPriority(content);
   }
 
+  if (topic === "patterns") {
+    return includeRetired ? content : filterRetiredPatterns(content);
+  }
+
   const hasFilter =
     days !== undefined ||
     maxEntries !== undefined ||
@@ -470,7 +675,7 @@ export async function getObservations(
     subject !== undefined ||
     search !== undefined;
 
-  if (topic !== "scratchpad" || !hasFilter) {
+  if (!hasFilter) {
     return content;
   }
 

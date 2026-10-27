@@ -202,7 +202,7 @@ export function register(server: McpServer): void {
 
   server.tool(
     "get_observations",
-    "Read AI observations (patterns, nudges, or scratchpad). For scratchpad, narrow the result with `days`, `type`, `subject`, and/or `search` instead of pulling the whole (large) file.",
+    "Read AI observations (patterns, nudges, or scratchpad). For scratchpad, narrow the result with `days`, `type`, `subject`, and/or `search` instead of pulling the whole (large) file. For patterns, pass `include_retired: true` to also show RETIRED sections.",
     {
       topic: z
         .enum(["patterns", "nudges", "scratchpad"])
@@ -248,8 +248,14 @@ export function register(server: McpServer): void {
           "Scratchpad only: also search the monthly archive files created by the scratchpad-decay script. " +
           "Useful for finding observations older than the live rolling window. Results are sorted chronologically."
         ),
+      include_retired: z
+        .boolean()
+        .optional()
+        .describe(
+          "Patterns only: include entries marked RETIRED (default false — retired patterns are hidden)."
+        ),
     },
-    async ({ topic, days, maxEntries, type, subject, search, include_archive }) => {
+    async ({ topic, days, maxEntries, type, subject, search, include_archive, include_retired }) => {
       await gitPull();
       const content = await getObservations(
         topic,
@@ -259,6 +265,7 @@ export function register(server: McpServer): void {
         subject,
         search,
         include_archive,
+        include_retired,
       );
       return { content: [{ type: "text", text: content }] };
     }
