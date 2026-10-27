@@ -1,9 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { readFile, writeFile } from "fs/promises";
+import { join } from "path";
 
 import {
   searchAnime,
   updateAnimeStatus,
+  getAnimeById,
   removeAnime,
   getMyAnimeList,
   searchManga,
@@ -11,6 +14,7 @@ import {
   removeManga,
   getMyMangaList,
 } from "./logic.js";
+import { config } from "../../core/config.js";
 
 /** MyAnimeList integration (anime + manga tracking). Reference example plugin. */
 export function register(server: McpServer): void {
@@ -32,7 +36,7 @@ export function register(server: McpServer): void {
 
   server.tool(
     "mal_update",
-    "Add or update an anime on your MyAnimeList. Search first to get the anime ID.",
+    "Add or update an anime on your MyAnimeList and keep tv.md / movies.md in sync. Search first to get the anime ID.",
     {
       anime_id: z.number().describe("MAL anime ID (use mal_search to find it)"),
       status: z
@@ -42,8 +46,52 @@ export function register(server: McpServer): void {
       episodes_watched: z.number().optional().describe("Number of episodes watched"),
     },
     async ({ anime_id, status, score, episodes_watched }) => {
-      const result = await updateAnimeStatus(anime_id, status, score, episodes_watched);
-      return { content: [{ type: "text", text: result }] };
+      const malResult = await updateAnimeStatus(anime_id, status, score, episodes_watched);
+
+      // Best-effort vault update: update the episode/status line in tv.md or movies.md.
+      let vaultNote = "";
+      try {
+        const details = await getAnimeById(anime_id);
+        if (details) {
+          const isMovie = details.mediaType === "movie";
+          const targetRel = isMovie ? "Media/movies.md" : "Media/tv.md";
+          const targetPath = join(config.vaultPath, targetRel);
+          const raw = await readFile(targetPath, "utf-8").catch(() => "");
+          if (raw) {
+            const titleLower = details.title.toLowerCase();
+            const lines = raw.split("\n");
+            let changed = false;
+            let currentSection = "";
+            const out: string[] = [];
+            for (const line of lines) {
+              const h2 = line.match(/^## (.+)/);
+              if (h2) currentSection = h2[1].trim().toLowerCase();
+              if (line.startsWith("|") && status === "watching" && episodes_watched !== null) {
+                const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
+                if (cells.length >= 2) {
+                  const cellTitle = cells[0].replace(/\[\[.*?\|?(.*?)\]\]/g, "$1").trim();
+                  if (cellTitle.toLowerCase() === titleLower &&
+                    (currentSection.includes("watching") || currentSection.includes("on hold"))) {
+                    const newEp = `${episodes_watched}/${details.numEpisodes}`;
+                    out.push("| " + [cells[0], newEp, ...cells.slice(2)].join(" | ") + " |");
+                    changed = true;
+                    continue;
+                  }
+                }
+              }
+              out.push(line);
+            }
+            if (changed) {
+              await writeFile(targetPath, out.join("\n"));
+              vaultNote = `; updated ${targetRel}`;
+            }
+          }
+        }
+      } catch (e) {
+        vaultNote = `; vault update skipped: ${(e as Error).message}`;
+      }
+
+      return { content: [{ type: "text", text: malResult + vaultNote }] };
     }
   );
 

@@ -101,6 +101,27 @@ export async function searchAnime(
 }
 
 /**
+ * Get anime details by ID (title, media_type, num_episodes).
+ * Returns null on error so callers can degrade gracefully.
+ */
+export async function getAnimeById(
+  animeId: number
+): Promise<{ title: string; mediaType: string; numEpisodes: number } | null> {
+  try {
+    const data = await malApi(
+      `/anime/${animeId}?fields=title,media_type,num_episodes`
+    );
+    return {
+      title: data.title ?? "",
+      mediaType: data.media_type ?? "",
+      numEpisodes: data.num_episodes ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Update anime list status (add or update).
  */
 export async function updateAnimeStatus(
