@@ -39,7 +39,9 @@ export function settings(): ReportSettings {
   );
   return {
     delivery,
-    audio: Boolean(raw.audio) && Boolean(process.env.OPENAI_API_KEY),
+    // Audio is available with openai (needs OPENAI_API_KEY) or kokoro (local, no key).
+    audio: Boolean(raw.audio) &&
+      (process.env.TTS_PROVIDER === "kokoro" || Boolean(process.env.OPENAI_API_KEY)),
     tone: raw.tone ? String(raw.tone) : undefined,
     location: raw.location ? String(raw.location) : undefined,
     trackers: Array.isArray(raw.trackers) ? raw.trackers.map(String) : [],
@@ -305,35 +307,13 @@ export async function saveToVault(report: Report): Promise<string> {
 
 /** Render the spoken text to mp3. Returns null when audio is off or fails. */
 async function synthesize(report: Report): Promise<Buffer | null> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
+  const provider = process.env.TTS_PROVIDER || "openai";
+  // OpenAI requires an API key; Kokoro runs locally so no key check.
+  if (provider === "openai" && !process.env.OPENAI_API_KEY) return null;
 
-  // The TTS endpoint caps input length, so long reports go out in pieces and
-  // the mp3 buffers are concatenated — mp3 frames tolerate that.
-  const CHUNK = 3800;
-  const chunks: string[] = [];
-  for (let i = 0; i < report.tts_text.length; i += CHUNK) {
-    chunks.push(report.tts_text.slice(i, i + CHUNK));
-  }
-
-  const buffers: Buffer[] = [];
-  for (const chunk of chunks) {
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-        voice: process.env.OPENAI_TTS_VOICE || "onyx",
-        input: chunk,
-      }),
-    });
-    if (!res.ok) throw new Error(`OpenAI TTS ${res.status}: ${await res.text()}`);
-    buffers.push(Buffer.from(await res.arrayBuffer()));
-  }
-  return Buffer.concat(buffers);
+  const { getTTSProvider } = await import("./tts.js");
+  const tts = getTTSProvider();
+  return tts.synthesize(report.tts_text);
 }
 
 async function deliverDiscord(report: Report, audio: Buffer | null): Promise<void> {
