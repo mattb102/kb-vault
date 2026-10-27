@@ -17,6 +17,7 @@ import matter from "gray-matter";
 import { config } from "./config.js";
 import { claudePrompt, CLAUDE_MODEL } from "./claude-cli.js";
 import { today } from "./utils.js";
+import { isNeverTouch } from "./reconcile.js";
 
 export const AUDIT_DIR_REL = "AI-Observations/audits";
 
@@ -71,8 +72,9 @@ async function filesUnder(group: string): Promise<string[]> {
       if (e.isDirectory()) await walk(full);
       else if (e.name.endsWith(".md")) {
         const rel = relative(config.vaultPath, full);
-        // Skip generated/manifest files that are not useful to audit.
+        // Skip generated/manifest files and never-touch paths.
         if (/core-identity\.md$|routing\.md$/.test(rel)) continue;
+        if (isNeverTouch(rel)) continue;
         out.push(rel);
       }
     }

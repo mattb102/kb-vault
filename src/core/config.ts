@@ -37,6 +37,16 @@ interface ReconcileConfig {
    * Default: Core/routing.md
    */
   routingFile?: string;
+  /**
+   * Section heading used when appending reading reactions to Media/Books files.
+   * Default: "## My take"
+   */
+  bookTakeSection?: string;
+  /**
+   * Section heading used when appending saved quotes to Media/Books files.
+   * Default: "## Saved lines"
+   */
+  bookSavedLinesSection?: string;
 }
 
 interface AuditConfig {
@@ -157,6 +167,8 @@ export const config = {
     days: file.reconcile?.days ?? 1,
     maxFilesPerRun: file.reconcile?.maxFilesPerRun ?? 8,
     routingFile: file.reconcile?.routingFile ?? "Core/routing.md",
+    bookTakeSection: file.reconcile?.bookTakeSection ?? "## My take",
+    bookSavedLinesSection: file.reconcile?.bookSavedLinesSection ?? "## Saved lines",
   },
 
   // Monthly audit (requires claude CLI).

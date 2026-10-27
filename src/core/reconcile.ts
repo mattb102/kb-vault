@@ -19,6 +19,7 @@ import { config } from "./config.js";
 import { readScratchpad, renderEntry, type Entry } from "./scratchpad.js";
 import { claudePrompt, CLAUDE_MODEL } from "./claude-cli.js";
 import { today } from "./utils.js";
+import { sweepOverdueNudges, type NudgeSweepResult } from "./nudge-sweep.js";
 
 const execFileP = promisify(execFile);
 
@@ -35,6 +36,7 @@ const BASE_NEVER_TOUCH: RegExp[] = [
   /^Core\/core-identity\.md$/,
   /^Core\/routing\.md$/,
   /^CLAUDE\.md$/,
+  /^Core\/standing-rules\.md$/i, // hand-maintained session rules; never reconciled
 ];
 
 const MAX_FILE_BYTES = 24_000;
@@ -60,6 +62,7 @@ export interface ReconcileResult {
   entries: number;
   triage: TriageItem[];
   results: FileResult[];
+  nudgeSweep?: NudgeSweepResult;
   logPath?: string;
 }
 
@@ -201,6 +204,260 @@ ${content}
 ${observations}`;
 }
 
+// ─── book sweep ────────────────────────────────────────────────────────────────
+//
+// Backstop for reading reactions that only reached the scratchpad. Matches book
+// observations to Media/Books/<slug>.md and appends any reactions the file
+// doesn't already have. Append-only -- existing text is never rewritten.
+
+const BOOKS_DIR_REL = "Media/Books";
+const BOOK_SUBJECT_RE = /\b(reading|books?|audiobook|novel)\b/i;
+const MAX_BOOK_FILES = 4;
+const MAX_REACTIONS = 8;
+
+interface BookFile {
+  rel: string;
+  title: string;
+  keys: string[];
+  status: string;
+  raw: string;
+}
+
+/** Lowercase match keys: the title (sans leading "the"), plus its longest word if >= 6 chars. */
+export function bookKeys(title: string): string[] {
+  const t = title.toLowerCase().replace(/^the\s+/, "").trim();
+  const longest = t
+    .split(/[^a-z0-9']+/)
+    .filter((w) => w.length >= 6)
+    .sort((a, b) => b.length - a.length)[0];
+  return [...new Set([t, ...(longest ? [longest] : [])])];
+}
+
+async function loadBookFiles(): Promise<BookFile[]> {
+  let names: string[];
+  try {
+    names = await readdir(join(config.vaultPath, BOOKS_DIR_REL));
+  } catch {
+    return [];
+  }
+  const out: BookFile[] = [];
+  for (const n of names.filter((x) => x.endsWith(".md") && x !== "README.md").sort()) {
+    const rel = `${BOOKS_DIR_REL}/${n}`;
+    const raw = await readFile(join(config.vaultPath, rel), "utf-8");
+    const parsed = matter(raw);
+    const h1 = parsed.content.match(/^# (.+)$/m)?.[1] ?? n.replace(/\.md$/, "").replace(/-/g, " ");
+    const title = h1.split(/\s+[-—–]\s+/)[0].trim();
+    out.push({ rel, title, keys: bookKeys(title), status: String(parsed.data.status ?? ""), raw });
+  }
+  return out;
+}
+
+/** Book observations grouped by file. */
+export function matchBookEntries(entries: Entry[], books: Pick<BookFile, "rel" | "keys" | "status">[]) {
+  const byFile = new Map<string, Entry[]>();
+  const add = (rel: string, e: Entry) => byFile.set(rel, [...(byFile.get(rel) ?? []), e]);
+  for (const e of entries) {
+    if (e.type === "meta") continue;
+    const text = `${e.subject}\n${e.body}`.toLowerCase();
+    const hits = books.filter((b) => b.keys.some((k) => text.includes(k)));
+    if (hits.length) hits.forEach((b) => add(b.rel, e));
+    else if (BOOK_SUBJECT_RE.test(e.subject))
+      books.filter((b) => b.status === "reading").forEach((b) => add(b.rel, e));
+  }
+  return byFile;
+}
+
+/** Append reactions as dated bullets under the configured section, deduping. */
+export function appendReactions(raw: string, reactions: string[], date: string): string | null {
+  const section = config.reconcileConfig.bookTakeSection;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const have = norm(raw);
+  const fresh = reactions
+    .map((r) => r.replace(/^\s*[-*]\s*/, "").trim())
+    .filter((r) => r && !have.includes(norm(r)));
+  if (!fresh.length) return null;
+  const parsed = matter(raw);
+  let body = parsed.content.replace(/\s+$/, "");
+  const bullets = fresh.map((r) => `- ${date}: ${r}`).join("\n");
+  if (body.includes(section)) {
+    const sectionStart = body.indexOf(section);
+    const afterSection = body.indexOf("\n## ", sectionStart + 1);
+    const insertAt = afterSection === -1 ? body.length : afterSection;
+    const before = body.slice(0, insertAt).replace(/\n+$/, "");
+    const after = body.slice(insertAt);
+    body = `${before}\n${bullets}\n${after}`;
+  } else {
+    body += `\n\n${section}\n${bullets}\n`;
+  }
+  return matter.stringify(body, { ...parsed.data, updated: date });
+}
+
+/** Append verbatim quotes under the configured saved-lines section, deduping. */
+export function appendSavedLines(raw: string, lines: string[], date: string): string | null {
+  const section = config.reconcileConfig.bookSavedLinesSection;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const have = norm(raw);
+  const fresh = lines
+    .map((l) => l.replace(/^\s*[-*]\s*/, "").trim())
+    .filter((l) => l && !have.includes(norm(l)));
+  if (!fresh.length) return null;
+  const parsed = matter(raw);
+  let body = parsed.content.replace(/\s+$/, "");
+  const bullets = fresh.map((l) => `- ${date}: ${l}`).join("\n");
+  if (body.includes(section)) {
+    const sectionStart = body.indexOf(section);
+    const afterSection = body.indexOf("\n## ", sectionStart + 1);
+    const insertAt = afterSection === -1 ? body.length : afterSection;
+    const before = body.slice(0, insertAt).replace(/\n+$/, "");
+    const after = body.slice(insertAt);
+    body = `${before}\n${bullets}\n${after}`;
+  } else {
+    body += `\n\n${section}\n${bullets}\n`;
+  }
+  return matter.stringify(body, { ...parsed.data, updated: date });
+}
+
+function bookSweepPrompt(book: BookFile, observations: string): string {
+  return `You are filing the user's reactions to a book into its vault file. Below are the book file and recent AI observations from conversations with the user that mention this book or their current reading.
+
+Return ONLY a JSON object: { "reactions": [...], "saved_lines": [...] }
+- "reactions": the user's own opinions, feelings, impressions, questions about this book. Use their exact words in quotes; otherwise a tight paraphrase. One string per reaction, no leading dash and no leading date (the date will be prepended automatically). Terse, matching the file's voice. Lead with chapter/progress if the observation gives it (e.g. "ch. 12: ..."). At most ${MAX_REACTIONS} items. Return [] if none.
+- "saved_lines": verbatim quotes FROM THE BOOK TEXT that the user mentioned saving or highlighted. Keep them verbatim/quoted. At most 4 items. Return [] if none.
+
+Never include AI analysis, interpretations, connections, or observations about behavior or mood.
+Skip logistics (start date, format, narrator, audiobook quality) and anything about a different book. When unsure, leave it out.
+
+=== BOOK FILE (${book.rel}) ===
+${book.raw}
+
+=== OBSERVATIONS ===
+${observations}`;
+}
+
+export async function bookSweep(entries: Entry[], date: string, model: string, dryRun: boolean): Promise<FileResult[]> {
+  const books = await loadBookFiles();
+  const byFile = matchBookEntries(entries, books);
+  const results: FileResult[] = [];
+  for (const book of books.filter((b) => byFile.has(b.rel)).slice(0, MAX_BOOK_FILES)) {
+    const raw = await readFile(join(config.vaultPath, book.rel), "utf-8");
+    const fr: FileResult = { file: book.rel, status: "no-change", reason: "book sweep: nothing new", facts: [] };
+    results.push(fr);
+    try {
+      const obs = byFile.get(book.rel)!.map(renderEntry).join("\n\n");
+      const reply = await claudePrompt(bookSweepPrompt({ ...book, raw }, obs), model, 240_000);
+      const parsed = extractJson<{ reactions?: unknown[]; saved_lines?: unknown[] }>(reply);
+      const reactions = (parsed.reactions ?? []).filter((r): r is string => typeof r === "string");
+      const savedLines = (parsed.saved_lines ?? []).filter((l): l is string => typeof l === "string");
+      let current = raw;
+      let changed = false;
+      const r1 = appendReactions(current, reactions.slice(0, MAX_REACTIONS), date);
+      if (r1) { current = r1; changed = true; }
+      const r2 = appendSavedLines(current, savedLines, date);
+      if (r2) { current = r2; changed = true; }
+      if (!changed) continue;
+      fr.facts = [...reactions, ...savedLines];
+      fr.diff = await unifiedDiff(raw, current, book.rel);
+      fr.status = "applied";
+      fr.reason = dryRun ? "book sweep -- dry run, not written" : `book sweep: filed reactions to ${book.title}`;
+      if (!dryRun) await writeFile(join(config.vaultPath, book.rel), current);
+    } catch (e) {
+      fr.status = "error";
+      fr.reason = `book sweep: ${(e as Error).message}`;
+    }
+  }
+  return results;
+}
+
+// ─── media sweep ─────────────────────────────────────────────────────────────
+//
+// Like bookSweep but covers TV/Movies/VNs/Games per-item files. Append-only.
+
+const MEDIA_DIRS: Array<{ dir: string; type: string; label: string }> = [
+  { dir: "Media/TV", type: "tv", label: "TV show" },
+  { dir: "Media/Movies", type: "movie", label: "film" },
+  { dir: "Media/VNs", type: "vn", label: "visual novel" },
+  { dir: "Media/Games", type: "game", label: "video game" },
+];
+
+interface MediaFile {
+  rel: string;
+  title: string;
+  type: string;
+  keys: string[];
+  status: string;
+  raw: string;
+}
+
+async function loadMediaFiles(): Promise<MediaFile[]> {
+  const out: MediaFile[] = [];
+  for (const { dir, type } of MEDIA_DIRS) {
+    let names: string[];
+    try {
+      names = await readdir(join(config.vaultPath, dir));
+    } catch {
+      continue;
+    }
+    for (const n of names.filter((x) => x.endsWith(".md") && x !== "README.md").sort()) {
+      const rel = `${dir}/${n}`;
+      const raw = await readFile(join(config.vaultPath, rel), "utf-8");
+      const parsed = matter(raw);
+      if (parsed.data.type !== type) continue;
+      const title: string = parsed.data.title ?? n.replace(/\.md$/, "").replace(/-/g, " ");
+      out.push({ rel, title, type, keys: bookKeys(title), status: String(parsed.data.status ?? ""), raw });
+    }
+  }
+  return out;
+}
+
+function mediaSweepPrompt(file: MediaFile, label: string, observations: string): string {
+  return `You are filing the user's reactions to a ${label} into its vault file. Below are the file and recent AI observations from conversations with the user that mention this ${label}.
+
+Return ONLY a JSON object: { "reactions": [...] }
+- "reactions": the user's own opinions, feelings, impressions, questions about this ${label}. Use their exact words in quotes; otherwise a tight paraphrase. One string per reaction, no leading dash and no leading date (the date will be prepended automatically). Terse, matching the file's voice. At most ${MAX_REACTIONS} items. Return [] if none.
+
+Never include AI analysis, interpretations, connections, or observations about behavior or mood.
+Skip logistics (start date, episode counts) and anything about a different title. When unsure, leave it out.
+
+=== FILE (${file.rel}) ===
+${file.raw}
+
+=== OBSERVATIONS ===
+${observations}`;
+}
+
+export async function mediaSweep(entries: Entry[], date: string, model: string, dryRun: boolean): Promise<FileResult[]> {
+  const files = await loadMediaFiles();
+  const byFile = matchBookEntries(entries, files);
+  const results: FileResult[] = [];
+  const dirLabel = new Map<string, string>([
+    ["Media/TV", "TV show"], ["Media/Movies", "film"], ["Media/VNs", "visual novel"], ["Media/Games", "video game"],
+  ]);
+  for (const file of files.filter((f) => byFile.has(f.rel)).slice(0, MAX_BOOK_FILES)) {
+    const raw = await readFile(join(config.vaultPath, file.rel), "utf-8");
+    const fr: FileResult = { file: file.rel, status: "no-change", reason: "media sweep: nothing new", facts: [] };
+    results.push(fr);
+    const dir = file.rel.split("/").slice(0, 2).join("/");
+    const label = dirLabel.get(dir) ?? "media";
+    try {
+      const obs = byFile.get(file.rel)!.map(renderEntry).join("\n\n");
+      const reply = await claudePrompt(mediaSweepPrompt({ ...file, raw }, label, obs), model, 240_000);
+      const parsed = extractJson<{ reactions?: unknown[] }>(reply);
+      const reactions = (parsed.reactions ?? []).filter((r): r is string => typeof r === "string");
+      const r1 = appendReactions(raw, reactions.slice(0, MAX_REACTIONS), date);
+      if (!r1) continue;
+      fr.facts = reactions;
+      fr.diff = await unifiedDiff(raw, r1, file.rel);
+      fr.status = "applied";
+      fr.reason = dryRun ? "media sweep -- dry run, not written" : `media sweep: filed reactions to ${file.title}`;
+      if (!dryRun) await writeFile(join(config.vaultPath, file.rel), r1);
+    } catch (e) {
+      fr.status = "error";
+      fr.reason = `media sweep: ${(e as Error).message}`;
+    }
+  }
+  return results;
+}
+
 export async function reconcileVault(
   opts: ReconcileOptions = {},
 ): Promise<ReconcileResult> {
@@ -307,6 +564,20 @@ export async function reconcileVault(
     fr.reason = item.reason;
   }
 
+  if (!opts.only) {
+    result.results.push(...(await bookSweep(recent, date, model, !!opts.dryRun)));
+    result.results.push(...(await mediaSweep(recent, date, model, !!opts.dryRun)));
+  }
+
+  if (!opts.only) {
+    result.nudgeSweep = await sweepOverdueNudges({
+      entries,
+      todayStr: date,
+      model,
+      dryRun: !!opts.dryRun,
+    });
+  }
+
   if (!opts.dryRun) result.logPath = await writeLog(result);
   return result;
 }
@@ -348,6 +619,20 @@ async function writeLog(r: ReconcileResult): Promise<string> {
   const summary = applied.length
     ? applied.map((x) => `- **${x.file}** — ${x.reason}`).join("\n")
     : "- (no files changed)";
+  const nudgeLines: string[] = [];
+  if (r.nudgeSweep) {
+    const { autoClosed, pastDueOpen } = r.nudgeSweep;
+    if (autoClosed.length) {
+      nudgeLines.push("## Nudges auto-closed");
+      nudgeLines.push(...autoClosed.map((i) => `- **${i.nudge.goal}** — ${i.verdict.resolution}`));
+      nudgeLines.push("");
+    }
+    if (pastDueOpen.length) {
+      nudgeLines.push("## Nudges past-due (not enough evidence)");
+      nudgeLines.push(...pastDueOpen.map((n) => `- **${n.goal}** (due ${n.due})`));
+      nudgeLines.push("");
+    }
+  }
   const body = [
     `# Vault reconcile — ${r.date}`,
     "",
@@ -363,6 +648,7 @@ async function writeLog(r: ReconcileResult): Promise<string> {
           "",
         ]
       : []),
+    ...nudgeLines,
     ...applied.flatMap((x) => [
       `## ${x.file}`,
       x.facts.length ? x.facts.map((f) => `- ${f}`).join("\n") : "",
