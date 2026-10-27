@@ -116,6 +116,12 @@ reconcile:
   # maxFilesPerRun: 8       # cap on files rewritten per run (default 8)
   # routingFile: Core/routing.md  # vault-relative path to your routing manifest
 
+  # Book and media sweep: reactions filed under these section headings in per-item files.
+  # Create Media/Books/<slug>.md with one of these headings and the sweep will append your
+  # reactions there after each run. Defaults shown; change to match your own conventions.
+  # bookTakeSection: "## My take"
+  # bookSavedLinesSection: "## Saved lines"
+
 # ─── Monthly audit (requires claude CLI, off by default) ───────────────────
 # On the 1st of each month, reads every auditable top-level folder and asks
 # Claude for per-file verdicts (KEEP / CLEAN / MERGE / DELETE). Read-only —
@@ -129,3 +135,15 @@ audit:
   #   - Core               # if omitted, all non-excluded folders are auto-discovered
   #   - Work
   #   - Health
+
+# ─── Standing rules (optional) ─────────────────────────────────────────────
+# A hand-maintained note of behavioral rules that every session reads first.
+# Create this file in your vault and Claude will include it verbatim at the top
+# of every get_identity response. Protected from reconcile and audit overwrites.
+# standingRulesFile: Core/standing-rules.md   # default; omit to use this path
+
+# ─── Instructions / routing note (optional) ────────────────────────────────
+# A vault note served as MCP server instructions AND appended to get_identity.
+# Typically a "where each kind of fact lives" routing guide. Also served to
+# remote clients (claude.ai / phone) as MCP server instructions.
+# instructionsFile: Core/routing.md   # default; omit to use this path

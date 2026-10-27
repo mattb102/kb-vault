@@ -95,6 +95,55 @@ most trackers need no code at all.
   CX22 is fine). Prefer a hosted API? Set `embeddingProvider: openai` + an
   `OPENAI_API_KEY` (runs on a tinier box, indexes faster, a few pennies/month).
 
+## Optional features
+
+These features are off by default and activated via env vars or config.yaml:
+
+**Scheduled push notifications** (`ios_app` plugin)
+Use `schedule_push`, `list_pushes`, and `cancel_push` MCP tools to queue
+notifications for future delivery. A cron job (`scripts/cron-push-queue.sh`,
+runs every minute) delivers them. No extra config beyond existing push setup.
+
+**Delegated coding tasks** (`claude_code` plugin)
+`run_claude_code` delegates tasks to Claude Code on the server. Customize
+with `CLAUDE_CODE_MODEL` (default `opus`), `CLAUDE_CODE_EFFORT` (default `high`),
+and `CLAUDE_CODE_DEFAULT_DIR` (working directory).
+
+**MAL anime/manga tracking** (`mal` plugin)
+Syncs to `Media/tv.md` and `Media/movies.md` by type. The `mal_update` tool
+now updates those files after each status change. Run `npm run sync-mal` (set
+`MAL_USERNAME` in your env) to bulk-sync your whole list. Per-series files in
+`Media/TV/` or `Media/Movies/` can use `mal_id: N` or `mal_ids: [N, N]` in
+frontmatter to get wiki-link back-references in the index.
+
+**Steam game library** (`sync-steam` script)
+Set `STEAM_API_KEY` and `STEAM_USER_ID` in `.env`, then run
+`npm run sync-steam` to write `Media/games.md` and `Media/steam-library.md`.
+Per-game files in `Media/Games/` can use `steam_appid: N` in frontmatter.
+
+**Local TTS with Kokoro** (`morning_report` plugin)
+Set `TTS_PROVIDER=kokoro` in `.env` to use a local ONNX model instead of
+OpenAI. Also set `KOKORO_MODEL_PATH` (path to `kokoro-v1.0.onnx`) and optionally
+`KOKORO_VOICES_PATH`. Install kokoro-onnx in a Python venv; ffmpeg required.
+Leave `TTS_PROVIDER` unset (or set to `openai`) to keep OpenAI as the provider.
+
+**Standing rules note**
+Create `Core/standing-rules.md` in your vault (path configurable via
+`standingRulesFile` in config.yaml). Its contents are prepended verbatim to
+every `get_identity` response. The file is protected from reconcile and audit
+overwrites. Use it for session behavioral rules that must never be forgotten.
+
+**Book/media sweep in reconcile**
+When reconcile is enabled, it now appends reading reactions and saved quotes
+to per-item files in `Media/Books/`, `Media/TV/`, `Media/Movies/`, `Media/VNs/`,
+and `Media/Games/`. Section headers default to `## My take` and `## Saved lines`;
+override with `reconcile.bookTakeSection` and `reconcile.bookSavedLinesSection`.
+
+**Stale-nudge sweep in reconcile**
+The reconcile cron now checks overdue nudges against the scratchpad and
+auto-closes ones with clear completion evidence. Unclear/undone nudges are
+listed in the reconcile log for you to handle manually.
+
 ## Running it directly (for tinkerers)
 
 ```bash
@@ -102,3 +151,13 @@ npm install && npm run build
 VAULT_PATH=/path/to/vault npm run index-vault    # local embeddings, no key needed
 VAULT_PATH=/path/to/vault npm start              # stdio by default
 ```
+
+### New scripts (run with `npx tsx scripts/<name>.ts`)
+
+| Script | Purpose | Env vars required |
+|--------|---------|-------------------|
+| `sync-mal.ts` | Sync MAL list to tv.md + movies.md | `MAL_USERNAME` |
+| `sync-steam.ts` | Sync Steam library to games.md | `STEAM_API_KEY`, `STEAM_USER_ID` |
+| `decay-scratchpad.ts` | Archive old scratchpad entries by calendar month | `VAULT_PATH` |
+| `push-queue-poller.ts` | Deliver due scheduled push notifications | `VAPID_*`, `APP_TOKEN` |
+| `kokoro_synth.py` | Local TTS synthesis helper (Python) | `KOKORO_MODEL_PATH` |

@@ -93,7 +93,7 @@ export async function listUpcoming(days = 7): Promise<string> {
             day: "numeric",
             hour: "numeric",
             minute: "2-digit",
-            timeZone: "America/New_York", // VPS is UTC; render in Matt's tz
+            timeZone: "America/New_York", // VPS is UTC; render in ET
           })
         : startDate.toLocaleDateString("en-US", {
             weekday: "short",

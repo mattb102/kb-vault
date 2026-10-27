@@ -71,7 +71,7 @@ export function contentHash(content: string): string {
 const TZ = "America/New_York";
 
 /**
- * Get today's date as YYYY-MM-DD in Matt's local timezone.
+ * Get today's date as YYYY-MM-DD in America/New_York.
  */
 export function today(): string {
   // en-CA locale formats as YYYY-MM-DD.
@@ -79,7 +79,7 @@ export function today(): string {
 }
 
 /**
- * Get current time as HH:mm in Matt's local timezone.
+ * Get current time as HH:mm in America/New_York.
  */
 export function nowTime(): string {
   return new Date().toLocaleTimeString("en-US", {
