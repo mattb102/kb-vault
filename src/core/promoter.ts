@@ -3,7 +3,7 @@ import { join } from "path";
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "./config.js";
 import {
-  readScratchpad,
+  readScratchpadEntries,
   renderEntry,
   PATTERNS_REL,
   type Entry,
@@ -309,7 +309,7 @@ export async function promotePatterns(
   const patternsPath = join(config.vaultPath, PATTERNS_REL);
   const highlightSync = await syncHighlights(patternsPath);
 
-  const { entries } = await readScratchpad();
+  const entries = await readScratchpadEntries({ sinceDays: Math.max(windowDays, 120) });
   const promoted = await loadPromoted();
   let clusters = findCandidates(entries, promoted, windowDays, minSize);
   if (options.only) {

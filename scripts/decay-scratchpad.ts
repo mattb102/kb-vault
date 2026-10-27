@@ -1,116 +1,123 @@
-import { writeFile, appendFile, access, mkdir } from "fs/promises";
-import { join, dirname } from "path";
+import { writeFile, readFile } from "fs/promises";
 import matter from "gray-matter";
-import { config } from "../src/core/config.js";
-import { readScratchpad, renderEntry, type Entry } from "../src/core/scratchpad.js";
+import {
+  readScratchpad,
+  renderEntry,
+  partitionForDecay,
+  mergeArchiveEntries,
+  readArchiveMonthEntries,
+  archiveMonthPath,
+  currentMonthET,
+  parseScratchpad,
+  type Entry,
+} from "../src/core/scratchpad.js";
 
-// Nightly scratchpad decay: entries older than DECAY_DAYS are moved from the
-// live scratchpad to monthly archive files (AI-Observations/scratchpad-archive-YYYY-MM.md).
-// The live file is a rolling window; the archives are readable via get_observations
-// with include_archive=true.
-//
-// Window is read from config.decay.scratchpadDecayDays (default 120 days).
-// Override on the command line: --days=90
+// Nightly scratchpad decay: entries from earlier calendar months are moved from
+// the live scratchpad to monthly archive files (AI-Observations/scratchpad-archive-YYYY-MM.md).
+// The live file always holds only the current calendar month (America/New_York).
+// Archived entries are searchable via get_observations with include_archive=true.
 
-const DAYS_ARG = process.argv.find((a) => a.startsWith("--days="));
-const DECAY_DAYS = DAYS_ARG
-  ? parseInt(DAYS_ARG.split("=")[1], 10)
-  : config.decay.scratchpadDecayDays;
-
-const ARCHIVE_DIR_REL = "AI-Observations";
 const DRY_RUN = process.argv.includes("--dry-run");
+// Override the "current" month (YYYY-MM) for testing/backfill; defaults to the
+// real current calendar month in America/New_York.
+const MONTH_ARG = process.argv.find((a) => a.startsWith("--month="));
+const CURRENT_MONTH = MONTH_ARG ? MONTH_ARG.split("=")[1] : currentMonthET();
 
-function shouldArchive(entries: Entry[], cutoff: Date): Set<number> {
-  const toArchive = new Set<number>();
-  entries.forEach((e, i) => {
-    if (e.date < cutoff) toArchive.add(i);
-  });
-  return toArchive;
+function renderEntries(entries: Entry[]): string {
+  return entries.map(renderEntry).join("\n\n");
 }
 
-function archiveMonthKey(e: Entry): string {
-  return e.timestamp.slice(0, 7); // YYYY-MM
-}
+/**
+ * Rewrite one archive month file with the merged (existing + incoming),
+ * de-duplicated, chronologically-ordered entries. Preserves the file's
+ * frontmatter and preamble if it already exists; otherwise creates both.
+ */
+async function writeArchiveMonth(month: string, incoming: Entry[]): Promise<number> {
+  const path = archiveMonthPath(month);
 
-async function appendArchive(month: string, rendered: string[]): Promise<void> {
-  const path = join(config.vaultPath, ARCHIVE_DIR_REL, `scratchpad-archive-${month}.md`);
-  let exists = false;
+  let frontmatter: Record<string, unknown>;
+  let preamble: string;
+  let existing: Entry[] = [];
   try {
-    await access(path);
-    exists = true;
-  } catch {}
-
-  if (!exists) {
-    const fm = {
+    const raw = await readFile(path, "utf-8");
+    const parsed = matter(raw);
+    frontmatter = parsed.data;
+    const p = parseScratchpad(parsed.content);
+    preamble = p.preamble;
+    existing = p.entries;
+  } catch {
+    frontmatter = {
       type: "ai-observation-archive",
       topic: "scratchpad-archive",
       month,
       tags: ["ai", "observations", "scratchpad", "archive"],
       created: new Date().toISOString().split("T")[0],
     };
-    const header = matter.stringify(
-      `\n# Scratchpad Archive — ${month}\n\nArchived observations from the AI scratchpad. Entries older than ${DECAY_DAYS} days are moved here from the live scratchpad.\n`,
-      fm,
-    );
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, header);
+    preamble = `\n# Scratchpad Archive — ${month}\n\nArchived observations from the AI scratchpad. The live scratchpad holds only the current calendar month; entries from earlier months are moved here, one file per month.`;
   }
 
-  await appendFile(path, "\n" + rendered.join("\n\n") + "\n");
+  const merged = mergeArchiveEntries(existing, incoming);
+  const body = preamble.replace(/\s+$/, "") + "\n\n" + renderEntries(merged) + "\n";
+  const content = matter.stringify(body, {
+    ...frontmatter,
+    updated: new Date().toISOString().split("T")[0],
+  });
+
+  if (!DRY_RUN) await writeFile(path, content);
+  return merged.length - existing.length; // net new rows added this run
 }
 
 async function main() {
   const { path: scratchpadPath, frontmatter, preamble, entries } = await readScratchpad();
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - DECAY_DAYS);
+  const { kept, byMonth } = partitionForDecay(entries, CURRENT_MONTH);
+  const moved = [...byMonth.values()].reduce((n, es) => n + es.length, 0);
 
-  const archiveIdxs = shouldArchive(entries, cutoff);
-  if (archiveIdxs.size === 0) {
-    console.log(`No entries older than ${DECAY_DAYS} days to archive. (${entries.length} total)`);
+  if (byMonth.size === 0) {
+    console.log(
+      `Live scratchpad already holds only ${CURRENT_MONTH} (${entries.length} entries). Nothing to archive.`,
+    );
     return;
   }
 
-  const byMonth = new Map<string, string[]>();
-  const kept: Entry[] = [];
-  entries.forEach((e, i) => {
-    if (archiveIdxs.has(i)) {
-      const m = archiveMonthKey(e);
-      if (!byMonth.has(m)) byMonth.set(m, []);
-      byMonth.get(m)!.push(renderEntry(e));
-    } else {
-      kept.push(e);
-    }
-  });
-
+  const months = [...byMonth.keys()].sort();
   console.log(
-    `Archiving ${archiveIdxs.size} of ${entries.length} entries across ${byMonth.size} month(s): ${[...byMonth.keys()].join(", ")}`,
+    `Current month: ${CURRENT_MONTH}. Archiving ${moved} of ${entries.length} entries across ${months.length} month(s): ${months.join(", ")}`,
   );
 
   if (DRY_RUN) {
-    for (const [month, rendered] of byMonth) {
-      console.log(`\n--- ${month} (${rendered.length} entries) ---`);
-      for (const r of rendered) console.log(r.split("\n")[0]);
+    for (const m of months) {
+      console.log(`  ${m}: ${byMonth.get(m)!.length} entries`);
     }
+    console.log(`Live would go ${entries.length} -> ${kept.length} entries.`);
     return;
   }
 
-  for (const [month, rendered] of byMonth) {
-    await appendArchive(month, rendered);
+  let newlyArchived = 0;
+  for (const m of months) {
+    newlyArchived += await writeArchiveMonth(m, byMonth.get(m)!);
   }
 
   const newContent =
-    preamble.replace(/\s+$/, "") +
-    "\n" +
-    kept.map(renderEntry).join("\n\n") +
-    "\n";
+    preamble.replace(/\s+$/, "") + "\n" + renderEntries(kept) + "\n";
   const rewritten = matter.stringify(newContent, {
     ...frontmatter,
     updated: new Date().toISOString().split("T")[0],
   });
   await writeFile(scratchpadPath, rewritten);
 
-  console.log(`Scratchpad: ${entries.length} → ${kept.length} entries.`);
+  // Count invariant: everything in the live file before the run is either kept
+  // or moved. (newlyArchived may be < moved if some entries were already in an
+  // archive from a prior run -- dedupe absorbs those.)
+  console.log(
+    `Live scratchpad: ${entries.length} -> ${kept.length} entries (moved ${moved}, ${newlyArchived} net-new into archives).`,
+  );
+  if (kept.length + moved !== entries.length) {
+    console.error(
+      `WARNING: count mismatch -- kept(${kept.length}) + moved(${moved}) != before(${entries.length})`,
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

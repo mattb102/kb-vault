@@ -16,7 +16,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import matter from "gray-matter";
 import { config } from "./config.js";
-import { readScratchpad, renderEntry, type Entry } from "./scratchpad.js";
+import { readScratchpad, readScratchpadEntries, renderEntry, type Entry } from "./scratchpad.js";
 import { claudePrompt, CLAUDE_MODEL } from "./claude-cli.js";
 import { today } from "./utils.js";
 import { sweepOverdueNudges, type NudgeSweepResult } from "./nudge-sweep.js";
@@ -469,7 +469,8 @@ export async function reconcileVault(
   const routingRel =
     (config as any).reconcileConfig?.routingFile ?? DEFAULT_ROUTING_REL;
 
-  const { entries } = await readScratchpad();
+  // Use readScratchpadEntries to include any archive months the window touches.
+  const entries = await readScratchpadEntries({ sinceDays: days });
   const recent = recentEntries(entries, days);
   const result: ReconcileResult = {
     date,

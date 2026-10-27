@@ -202,7 +202,7 @@ export function register(server: McpServer): void {
 
   server.tool(
     "get_observations",
-    "Read AI observations (patterns, nudges, or scratchpad). For scratchpad, narrow the result with `days`, `type`, `subject`, and/or `search` instead of pulling the whole (large) file. For patterns, pass `include_retired: true` to also show RETIRED sections.",
+    "Read AI observations (patterns, nudges, or scratchpad). For scratchpad, narrow the result with `days`, `type`, `subject`, and/or `search` instead of pulling the whole file. The live scratchpad holds only the current calendar month; a `days` window that reaches into an earlier month automatically folds in the archive months it spans. For patterns, pass `include_retired: true` to also show RETIRED sections.",
     {
       topic: z
         .enum(["patterns", "nudges", "scratchpad"])

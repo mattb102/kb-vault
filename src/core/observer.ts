@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import matter from "gray-matter";
 import { config } from "./config.js";
@@ -6,6 +6,12 @@ import { frontmatterIndex } from "./frontmatter.js";
 import { absPath, today, nowTime, currentWeek } from "./utils.js";
 import { gitCommitAndPush } from "./sync.js";
 import { isDueOn, daysOverdue } from "./due.js";
+import {
+  currentMonthET,
+  listArchiveMonths,
+  archiveMonthsInWindow,
+  archiveMonthPath,
+} from "./scratchpad.js";
 
 /**
  * Append a raw observation to the AI scratchpad.
@@ -679,19 +685,35 @@ export async function getObservations(
     return content;
   }
 
-  // Optionally splice in the monthly archive files (written by
-  // scripts/decay-scratchpad.ts) so subject/search filters can reach past the
-  // live rolling window. Archive entries come first; the combined list is
-  // re-sorted by timestamp below since decay appends out of order.
+  // Compute the day cutoff in the same TZ scratchpad entries are stamped in.
+  // Hoisted here so the month part can decide whether a `days` window reaches
+  // into an archived (earlier) calendar month.
+  const cutoffStr =
+    days !== undefined
+      ? new Date(Date.now() - (days - 1) * 86_400_000).toLocaleDateString(
+          "en-CA",
+          { timeZone: "America/New_York" },
+        )
+      : undefined;
+
+  // Splice in the monthly archive files when either the caller asked explicitly
+  // OR a date window reaches back past the current calendar month -- the live
+  // file holds only the current month, so without this a reader early in a month
+  // would silently lose context.
+  const sinceMonth = cutoffStr ? cutoffStr.slice(0, 7) : "0000-00";
+  const wantArchive =
+    includeArchive || (cutoffStr !== undefined && sinceMonth < currentMonthET());
+
   let combined = content;
-  if (includeArchive) {
-    const dir = join(config.vaultPath, "AI-Observations");
-    const names = (await readdir(dir))
-      .filter((n) => /^scratchpad-archive-\d{4}-\d{2}\.md$/.test(n))
-      .sort();
+  if (wantArchive) {
+    const months = archiveMonthsInWindow(
+      await listArchiveMonths(),
+      sinceMonth,
+      currentMonthET(),
+    );
     const archived: string[] = [];
-    for (const n of names) {
-      const { content: c } = matter(await readFile(join(dir, n), "utf-8"));
+    for (const m of months) {
+      const { content: c } = matter(await readFile(archiveMonthPath(m), "utf-8"));
       const idx = c.search(/^### \d{4}-\d{2}-\d{2}\b/m);
       if (idx >= 0) archived.push(c.slice(idx));
     }
@@ -739,17 +761,14 @@ export async function getObservations(
   }
   flush();
 
-  if (includeArchive) {
-    // Header is "### YYYY-MM-DD HH:MM | ..." so a plain string compare on the
-    // first 16 chars sorts chronologically.
+  if (wantArchive) {
+    // Header is "### YYYY-MM-DD HH:MM | ..." so a plain string compare on
+    // the first 16 chars sorts chronologically.
     entries.sort((a, b) => a.text.slice(4, 20).localeCompare(b.text.slice(4, 20)));
   }
 
   let filtered = entries;
-  if (days !== undefined) {
-    // Compute cutoff in the same TZ that scratchpad entries are stamped in (see today()).
-    const cutoffStr = new Date(Date.now() - (days - 1) * 86_400_000)
-      .toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  if (cutoffStr !== undefined) {
     filtered = filtered.filter((e) => e.date >= cutoffStr);
   }
   if (type !== undefined) {
