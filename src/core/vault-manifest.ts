@@ -30,9 +30,20 @@ export function loadWriteChecklist(): string | undefined {
   return loadVaultFile(rel);
 }
 
-/** Load the routing manifest from Core/routing.md. */
+/** Load the routing manifest from the configured path (default Core/routing.md). */
 export function loadRoutingManifest(): string | undefined {
-  return loadVaultFile("Core/routing.md");
+  const rel = config.instructionsFile || "Core/routing.md";
+  return loadVaultFile(rel);
+}
+
+/**
+ * Load the standing-rules note from the configured path (default Core/standing-rules.md).
+ * This file is hand-maintained behavioral rules that every session must read verbatim.
+ * Protected from reconcile and audit overwrites. Missing file is silently skipped.
+ */
+export function loadStandingRules(): string | undefined {
+  const rel = config.standingRulesFile || "Core/standing-rules.md";
+  return loadVaultFile(rel);
 }
 
 /**

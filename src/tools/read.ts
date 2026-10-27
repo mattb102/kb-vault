@@ -7,7 +7,7 @@ import { hybridSearch } from "../core/search.js";
 import { gitPull } from "../core/sync.js";
 import { getObservations } from "../core/observer.js";
 import { absPath } from "../core/utils.js";
-import { loadWriteChecklist, loadRoutingManifest } from "../core/vault-manifest.js";
+import { loadWriteChecklist, loadRoutingManifest, loadStandingRules } from "../core/vault-manifest.js";
 
 /** Register the core read tools (search, read, find, identity, journals, observations). */
 export function register(server: McpServer): void {
@@ -107,7 +107,7 @@ export function register(server: McpServer): void {
 
   server.tool(
     "get_identity",
-    "Return the core identity document (who the user is), optionally prefixed with the write checklist and routing manifest when those files exist in the vault.",
+    "Return the core identity document (who the user is). Prefixed with write checklist, standing rules, and routing manifest when those files exist in the vault. Call at the start of every conversation.",
     {},
     async () => {
       await gitPull();
@@ -121,11 +121,12 @@ export function register(server: McpServer): void {
       const content = await readFile(entry.path, "utf-8");
       const checklist = loadWriteChecklist();
       const routing = loadRoutingManifest();
-      const parts = [
-        ...(checklist ? [checklist] : []),
-        content.trim(),
-        ...(routing ? [routing] : []),
-      ];
+      const standingRules = loadStandingRules();
+      const parts: string[] = [];
+      if (standingRules) parts.push("# Standing rules (read first)\n\n" + standingRules);
+      if (checklist) parts.push(checklist);
+      parts.push(content.trim());
+      if (routing) parts.push(routing);
       return { content: [{ type: "text", text: parts.join("\n\n---\n\n") }] };
     }
   );

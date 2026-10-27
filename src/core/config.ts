@@ -90,6 +90,19 @@ interface FileConfig {
    * Create the file from config/write-checklist.example.md as a starting point.
    */
   checklistFile?: string;
+  /**
+   * Vault-relative path to the standing-rules note. When present, it is
+   * prepended verbatim to every get_identity response so every session reads the
+   * rules before anything else. The file is protected from reconcile and audit
+   * overwrites by the NEVER_TOUCH list. Default: Core/standing-rules.md.
+   */
+  standingRulesFile?: string;
+  /**
+   * Vault-relative path to a routing/instructions note served as MCP server
+   * instructions AND appended to get_identity. Tells Claude which vault file
+   * each kind of fact belongs in. Default: Core/routing.md.
+   */
+  instructionsFile?: string;
 }
 
 function loadFileConfig(): FileConfig {
@@ -178,6 +191,8 @@ export const config = {
   },
 
   checklistFile: file.checklistFile || "Core/write-checklist.md",
+  standingRulesFile: file.standingRulesFile || "Core/standing-rules.md",
+  instructionsFile: file.instructionsFile || "Core/routing.md",
 
   chunkSize: 800, // target tokens per chunk
   chunkOverlap: 100,

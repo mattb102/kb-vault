@@ -36,7 +36,6 @@ const BASE_NEVER_TOUCH: RegExp[] = [
   /^Core\/core-identity\.md$/,
   /^Core\/routing\.md$/,
   /^CLAUDE\.md$/,
-  /^Core\/standing-rules\.md$/i, // hand-maintained session rules; never reconciled
 ];
 
 const MAX_FILE_BYTES = 24_000;
@@ -75,7 +74,11 @@ export interface ReconcileOptions {
 }
 
 export function isNeverTouch(rel: string): boolean {
-  return BASE_NEVER_TOUCH.some((re) => re.test(rel));
+  if (BASE_NEVER_TOUCH.some((re) => re.test(rel))) return true;
+  // Protect the configured standing-rules and instructions files from overwrites.
+  const standingRules = config.standingRulesFile || "Core/standing-rules.md";
+  if (rel === standingRules) return true;
+  return false;
 }
 
 async function listCanonicalFiles(): Promise<string[]> {
