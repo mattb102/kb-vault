@@ -2,14 +2,25 @@ import { spawn } from "child_process";
 import { existsSync, statSync } from "fs";
 import { homedir } from "os";
 import { resolve } from "path";
+import { randomUUID } from "node:crypto";
 
 const DEFAULT_WORKING_DIR =
   process.env.CLAUDE_CODE_DEFAULT_DIR ||
-  resolve(homedir(), "kb-mcp-server");
+  resolve(homedir(), "kb-vault");
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_OUTPUT_BYTES = 100_000;
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "claude";
+
+// Standing preamble prepended to EVERY delegated task so the caller never has to
+// remember it. Keeps the architecture map (CLAUDE.md) trusted and honest.
+const STANDING_PREAMBLE = [
+  "Before starting: if a CLAUDE.md exists in the working directory, read it first — it is the current-state architecture map.",
+  "After your change: if this task alters the repo's structure, entry points, env vars, scheduling, or introduces a gotcha, update CLAUDE.md in the same commit. A wrong line there is worse than a missing one.",
+  "",
+  "---",
+  "",
+].join("\n");
 
 export interface RunClaudeCodeOptions {
   task: string;
@@ -26,6 +37,7 @@ export interface RunClaudeCodeResult {
   timedOut: boolean;
   durationMs: number;
   cwd: string;
+  sessionId: string;
 }
 
 export async function runClaudeCode({
@@ -40,18 +52,27 @@ export async function runClaudeCode({
     throw new Error(`Working directory does not exist or is not a directory: ${cwd}`);
   }
 
-  // The CLI prioritizes ANTHROPIC_API_KEY over subscription/OAuth. If the
-  // server's .env has a key (used for pattern synthesis), the CLI silently
-  // bills that API account instead of the user's Claude subscription. Strip it
-  // so the CLI falls through to CLAUDE_CODE_OAUTH_TOKEN / stored credentials.
+  // The claude CLI prefers ANTHROPIC_API_KEY over subscription OAuth, so a
+  // key in the server's environment silently forces API billing. Strip it here
+  // so the CLI rides CLAUDE_CODE_OAUTH_TOKEN / stored subscription credentials.
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;
+
+  const model = process.env.CLAUDE_CODE_MODEL ?? "opus";
+  const effort = process.env.CLAUDE_CODE_EFFORT ?? "high";
+
+  // Prepend the standing preamble so every delegated task reads/maintains CLAUDE.md.
+  const fullTask = STANDING_PREAMBLE + task;
+
+  // Fresh UUID per invocation so concurrent calls get isolated session state and
+  // never share ~/.claude/projects/<cwd-hash>/ conversation history with each other.
+  const sessionId = randomUUID();
 
   return new Promise((resolvePromise, reject) => {
     const start = Date.now();
     const child = spawn(
       CLAUDE_BIN,
-      ["--print", "--dangerously-skip-permissions", task],
+      ["--print", "--no-session-persistence", "--dangerously-skip-permissions", "--model", model, "--effort", effort, "--session-id", sessionId, fullTask],
       // stdin from /dev/null ("ignore") gives `claude --print` an immediate EOF
       // so it doesn't hang waiting for piped stdin that we never write to.
       { cwd, env, stdio: ["ignore", "pipe", "pipe"] }
@@ -107,6 +128,7 @@ export async function runClaudeCode({
         timedOut,
         durationMs: Date.now() - start,
         cwd,
+        sessionId,
       });
     });
   });
@@ -115,6 +137,7 @@ export async function runClaudeCode({
 export function formatRunResult(r: RunClaudeCodeResult): string {
   const lines: string[] = [];
   lines.push(`cwd: ${r.cwd}`);
+  lines.push(`session: ${r.sessionId}`);
   lines.push(
     `exit: ${r.exitCode ?? "null"}${r.signal ? ` (signal ${r.signal})` : ""} · ${Math.round(r.durationMs / 1000)}s${r.timedOut ? " · TIMED OUT" : ""}${r.truncated ? " · stdout truncated" : ""}`
   );
