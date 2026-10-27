@@ -368,11 +368,14 @@ export async function sendPush(
 
   for (const s of subs) {
     try {
-      await webpush.sendNotification(s, payload);
+      const res = await webpush.sendNotification(s, payload);
+      // The library throws on non-2xx, so reaching here means success.
+      console.log(`[push] sent status=${res?.statusCode ?? "?"} endpoint=${s.endpoint.slice(0, 70)}...`);
       sent++;
       keep.push(s);
     } catch (e: any) {
       const code = e?.statusCode;
+      console.error(`[push] sendNotification error status=${code} endpoint=${s.endpoint.slice(0, 70)}...`);
       if (code === 404 || code === 410) continue; // gone for good — drop it
       failed++;
       keep.push(s);
