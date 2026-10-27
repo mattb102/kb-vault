@@ -16,11 +16,23 @@ const CLUSTER_WINDOW_DAYS = 30;
 const MIN_CLUSTER_SIZE = 3;
 const FRESHNESS_DAYS = 14;
 
+// Matches lines like "- **CORRECTION 2026-08-17:**" or "CORRECTION ..." etc.
+export const CORRECTION_LINE_RE = /^\s*(?:-\s*)?\*{0,2}CORRECTION\b/i;
+
+export function extractCorrectionLines(blockText: string): string[] {
+  return blockText.split("\n").filter((line) => CORRECTION_LINE_RE.test(line));
+}
+
 interface Cluster {
   type: string;
   subject: string;
   entries: Entry[];
-  resynth?: { firstNoticed: string; synthesized: string; sinceCount: number };
+  resynth?: {
+    firstNoticed: string;
+    synthesized: string;
+    sinceCount: number;
+    priorPattern: string;
+  };
 }
 
 export interface PromoteOptions {
@@ -33,6 +45,7 @@ export interface PromoteOptions {
 interface PromotedRecord {
   synthesized: Date;
   firstNoticed: string;
+  priorBlock: string;
 }
 
 function clusterKey(type: string, subject: string): string {
@@ -76,7 +89,22 @@ async function loadPromoted(): Promise<Map<string, PromotedRecord>> {
       parseDateSafe(synthDate) ??
       parseDateSafe(firstNoticed) ??
       new Date(0);
-    out.set(clusterKey(type, subject), { synthesized, firstNoticed });
+
+    // Capture heading text (strip ==highlight== markers) and key lines for priorBlock.
+    const headingLine = m[0].split("\n")[1] ?? "";
+    const headingText = headingLine.replace(/^### /, "").replace(/==/g, "").trim();
+    const bodyLines = body.split("\n");
+    const evidenceLine = bodyLines.find((l) => /\*\*Evidence:\*\*/.test(l)) ?? "";
+    const corrections = extractCorrectionLines(body);
+    const priorBlock = [
+      `### ${headingText}`,
+      evidenceLine,
+      ...corrections,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    out.set(clusterKey(type, subject), { synthesized, firstNoticed, priorBlock });
   }
   return out;
 }
@@ -113,6 +141,7 @@ function findCandidates(
           firstNoticed: prev.firstNoticed,
           synthesized: prev.synthesized.toLocaleDateString("en-CA"),
           sinceCount,
+          priorPattern: prev.priorBlock,
         },
       });
     } else {
@@ -131,17 +160,22 @@ function findCandidates(
   return clusters;
 }
 
-function buildSynthesisPrompt(cluster: Cluster): string {
+export function buildSynthesisPrompt(cluster: Cluster): string {
   const entryText = cluster.entries.map(renderEntry).join("\n\n");
   const resynthNote = cluster.resynth
     ? `\nNote: this updates an earlier pattern on the same subject. ${cluster.resynth.sinceCount} new entries have accumulated since the last synthesis. Reflect the full history below, with weight on the recent entries.\n`
     : "";
-  return `You are reviewing recurring AI observations about Matt on a single subject. Synthesize them into one *pattern* — a single sentence that captures the underlying recurring truth, not just a summary of any one entry.
+
+  const priorPatternSection = cluster.resynth?.priorPattern
+    ? `Previous version of this pattern (synthesized ${cluster.resynth.synthesized}):\n${cluster.resynth.priorPattern}\n\nThis previous version is NOT authoritative. Re-derive the pattern from the entries below. If the entries no longer support part of the previous version, drop it and say so in the evidence. If a line above begins with CORRECTION, treat it as a binding human retraction: never reintroduce the retracted claim in any rephrasing.\n\n`
+    : "";
+
+  return `You are reviewing recurring AI observations about the user on a single subject. Synthesize them into one *pattern* — a single sentence that captures the underlying recurring truth, not just a summary of any one entry.
 
 Subject: ${cluster.subject} (type: ${cluster.type})
 Entry count: ${cluster.entries.length}${resynthNote}
 
-Entries:
+${priorPatternSection}Entries:
 ${entryText}
 
 Respond with EXACTLY this format, nothing else:
@@ -228,7 +262,7 @@ async function syncHighlights(
   return { wrapped, stripped };
 }
 
-async function rewritePatternBlock(
+export async function rewritePatternBlock(
   patternsPath: string,
   type: string,
   subject: string,
@@ -251,9 +285,18 @@ async function rewritePatternBlock(
   const next = nextRe.exec(raw);
   const blockEnd = next ? next.index : raw.length;
 
+  // Preserve any hand-written CORRECTION lines from the old block.
+  const oldBlock = raw.slice(blockStart, blockEnd);
+  const corrections = extractCorrectionLines(oldBlock);
+  const toAppend = corrections.filter((line) => !replacement.includes(line));
+  const finalReplacement =
+    toAppend.length > 0
+      ? replacement.trimEnd() + "\n" + toAppend.join("\n") + "\n"
+      : replacement;
+
   const before = raw.slice(0, blockStart);
   const after = raw.slice(blockEnd);
-  await writeFile(patternsPath, before + replacement + after, "utf-8");
+  await writeFile(patternsPath, before + finalReplacement + after, "utf-8");
   return true;
 }
 
