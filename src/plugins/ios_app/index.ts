@@ -16,6 +16,13 @@ import {
   vapidPublicKey,
 } from "./logic.js";
 import { recordSend } from "../../core/push-ledger.js";
+import {
+  parseEasternNaive,
+  formatEastern,
+  addItem as addPushQueueItem,
+  updateItem as updatePushQueueItem,
+  loadQueue as loadPushQueue,
+} from "../../core/push-queue.js";
 
 /**
  * ios_app — the phone half of the vault.
@@ -300,6 +307,135 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
+    }
+  );
+
+  server.tool(
+    "schedule_push",
+    "Schedule a push notification for a future time. `at` must be a naive America/New_York datetime string like \"2026-10-07T18:00:00\" -- no Z, no offset. Rejects past times.",
+    {
+      title: z.string().describe("Notification title"),
+      body: z.string().describe("Notification body text"),
+      at: z
+        .string()
+        .describe(
+          "When to send, as a naive ET datetime: \"YYYY-MM-DDTHH:MM:SS\" (no Z, no offset). Example: \"2026-10-07T18:00:00\"."
+        ),
+      url: z
+        .string()
+        .optional()
+        .default("/app")
+        .describe("URL to open when the notification is tapped (default: /app)"),
+    },
+    async ({ title, body, at, url }) => {
+      let fireAt: Date;
+      try {
+        fireAt = parseEasternNaive(at);
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: `Invalid time: ${err.message}` }],
+          isError: true,
+        };
+      }
+      if (fireAt.getTime() <= Date.now()) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Rejected: "${at}" is in the past (${formatEastern(fireAt)}). Pass a future ET time.`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      const item = await addPushQueueItem({
+        title,
+        body,
+        url: url ?? "/app",
+        fire_at: fireAt.toISOString(),
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Scheduled. id=${item.id}\nFires at: ${formatEastern(fireAt)} (${fireAt.toISOString()})`,
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "list_pushes",
+    "List scheduled push notifications. Pending items shown by default; pass include_done=true to also show sent/failed/cancelled.",
+    {
+      include_done: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("Include sent, failed, and cancelled items (default false)"),
+    },
+    async ({ include_done }) => {
+      const items = await loadPushQueue();
+      const filtered = include_done
+        ? items
+        : items.filter((i) => i.status === "pending");
+      if (filtered.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: include_done ? "No push notifications in the queue." : "No pending push notifications.",
+            },
+          ],
+        };
+      }
+      const lines = filtered.map((i) => {
+        const fireEt = formatEastern(new Date(i.fire_at));
+        const base = `[${i.status.toUpperCase()}] ${i.title} -- ${fireEt} (id: ${i.id})`;
+        const extra =
+          i.status === "failed" && i.last_error ? `\n  error: ${i.last_error}` : "";
+        return base + extra;
+      });
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+  );
+
+  server.tool(
+    "cancel_push",
+    "Cancel a pending scheduled push notification by id.",
+    {
+      id: z.string().describe("Push notification id (from schedule_push or list_pushes)"),
+    },
+    async ({ id }) => {
+      const items = await loadPushQueue();
+      const item = items.find((i) => i.id === id);
+      if (!item) {
+        return {
+          content: [{ type: "text", text: `Not found: ${id}` }],
+          isError: true,
+        };
+      }
+      if (item.status !== "pending") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Cannot cancel: item ${id} has status "${item.status}" (only pending items can be cancelled).`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      await updatePushQueueItem(id, { status: "cancelled" });
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cancelled: "${item.title}" (was scheduled for ${formatEastern(new Date(item.fire_at))})`,
+          },
+        ],
+      };
     }
   );
 
