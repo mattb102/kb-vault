@@ -4,7 +4,7 @@ import { z } from "zod";
 import { today } from "../../core/utils.js";
 import {
   loadStore, saveStore, newId, applyCheck, applyUncheck, applyDelete, applyMove,
-  demotePastMusts, computeMustFrom, type TodoItem, type RecurrenceRule,
+  demotePastMusts, catchUpRecurring, computeMustFrom, type TodoItem, type RecurrenceRule,
 } from "./store.js";
 import { buildTodoDisplay, resolveSelector } from "./display.js";
 
@@ -28,6 +28,7 @@ const recurrenceSchema = z.object({
 async function viewFor(startDate: string, endDate = startDate) {
   const t = today();
   await demotePastMusts(t);
+  await catchUpRecurring(t);
   const store = await loadStore();
   return buildTodoDisplay(store.items, { startDate, endDate, today: t, timeZone: TIME_ZONE });
 }
@@ -37,7 +38,7 @@ function render(days: ReturnType<typeof buildTodoDisplay>): string {
   if (!nonEmpty.length) return "No to-dos.";
   return nonEmpty.map((d) =>
     `## ${d.date} ${d.dayLabel}\n` + d.items.map((r, i) =>
-      `${i}. ${r.checked ? "[x]" : "[ ]"} ${r.text}${r.annotation ? " " + r.annotation : ""}${r.time ? " @" + r.time : ""}${r.must ? " #must" : ""}${r.recurring ? " #recurring" : ""}${r.checked && r.resolution ? " — " + r.resolution : ""}  (id: ${r.id})`,
+      `${i}. ${r.checked ? "[x]" : "[ ]"} ${r.text}${r.annotation ? " " + r.annotation : ""}${r.time ? " @" + r.time : ""}${r.must ? " #must" : ""}${r.recurrence ? " #" + r.recurrence : ""}${r.checked && r.resolution ? " — " + r.resolution : ""}  (id: ${r.id})`,
     ).join("\n"),
   ).join("\n\n");
 }

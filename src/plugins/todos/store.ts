@@ -185,6 +185,23 @@ export function applyMove(item: TodoItem, toDate: string): TodoItem {
   };
 }
 
+/** A recurring item whose cycle fell behind snaps to the cycle current today. */
+export function catchUpRecurringItem(item: TodoItem, today: string): TodoItem | null {
+  if (item.status !== "open" || !item.recurrence || !item.show_from) return null;
+  const current = currentCycleShowFrom(item.recurrence, today);
+  if (item.show_from >= current) return null;
+  const off = item.recurrence.must_offset_days;
+  return { ...item, show_from: current, must_from: off !== undefined ? computeMustFrom(current, off) : item.must_from, updated_at: new Date().toISOString() };
+}
+
+export async function catchUpRecurring(today: string): Promise<TodoItem[]> {
+  const store = await loadStore();
+  const moved: TodoItem[] = [];
+  store.items = store.items.map((it) => { const n = catchUpRecurringItem(it, today); if (n) moved.push(n); return n ?? it; });
+  if (moved.length) await saveStore(store);
+  return moved;
+}
+
 /** A one-off must whose day has passed becomes flex; the lapse is recorded in must_missed. */
 export function demoteIfLapsed(item: TodoItem, today: string): TodoItem | null {
   if (item.status !== "open" || !item.must_from || item.recurrence) return null;

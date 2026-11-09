@@ -6,7 +6,8 @@
  *                implicitly) + anything done today.
  *  - Future day: open items whose show_from is exactly that day.
  *  - "(from MM/DD)" / "(missed MM/DD)" are display-only, derived from show_from and
- *    must_missed. Titles in the store stay clean.
+ *    must_missed. Titles in the store stay clean. Recurring items carry no
+ *    annotation: a daily you didn't tick yesterday is simply today's.
  */
 import { addDays, localDateOf, type TodoItem } from "./store.js";
 
@@ -19,6 +20,7 @@ export interface TodoRow {
   checked: boolean;
   resolution?: string;
   recurring: boolean;
+  recurrence: "daily" | "weekly" | "monthly" | null;
   show_from?: string;
 }
 
@@ -39,7 +41,7 @@ const mmdd = (iso: string) => iso.slice(5).replace("-", "/");
 
 function row(item: TodoItem, date: string, today: string, checked: boolean, resolution?: string): TodoRow {
   let annotation: string | null = null;
-  if (!checked && date === today) {
+  if (!checked && date === today && !item.recurrence) {
     if (item.must_missed) annotation = `(missed ${mmdd(item.must_missed)})`;
     else if (item.show_from && item.show_from < today) annotation = `(from ${mmdd(item.show_from)})`;
   }
@@ -52,6 +54,7 @@ function row(item: TodoItem, date: string, today: string, checked: boolean, reso
     checked,
     resolution: resolution ?? (checked ? item.resolution : undefined),
     recurring: !!item.recurrence,
+    recurrence: item.recurrence?.rule ?? null,
     show_from: item.show_from,
   };
 }
