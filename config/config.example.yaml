@@ -35,6 +35,7 @@ embeddingProvider: local
 #   claude_code - powerful: delegate coding tasks to Claude Code on the VPS
 #   ios_app     - phone home-screen app: tap-to-log trackers + push notifications
 #   morning_report - a daily briefing the vault writes about you
+#   todos     - day-specific to-dos in one JSON store: rollover, must/flex, recurring
 enabledPlugins: []
 
 # Per-plugin settings. Only the plugins you enable above read their section.
